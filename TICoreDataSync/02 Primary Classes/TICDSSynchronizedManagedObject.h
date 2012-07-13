@@ -26,5 +26,6 @@
 + (NSSet *)keysForWhichSyncChangesWillNotBeCreated;
 
 @property (nonatomic, readonly) NSManagedObjectContext *syncChangesMOC;
+@property (nonatomic, readwrite, assign) BOOL excludeFromSync;
 
 @end

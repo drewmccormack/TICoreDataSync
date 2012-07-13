@@ -21,6 +21,8 @@
 
 @implementation TICDSSynchronizedManagedObject
 
+@synthesize excludeFromSync;
+
 #pragma mark -
 #pragma mark Primary Sync Change Creation
 
@@ -230,6 +232,8 @@
 - (void)willSave
 {
     [super willSave];
+    
+    if ( self.excludeFromSync ) return;
     
     // if not in a synchronized MOC, or we don't have a doc sync manager, exit now
     if( ![[self managedObjectContext] isKindOfClass:[TICDSSynchronizedManagedObjectContext class]] || ![(TICDSSynchronizedManagedObjectContext *)[self managedObjectContext] documentSyncManager] ) {
