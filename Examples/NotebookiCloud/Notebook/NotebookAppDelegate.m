@@ -194,7 +194,7 @@ didReplaceStoreWithDownloadedStoreAtURL:(NSURL *)aStoreURL
     id store = [[self persistentStoreCoordinator]
                 addPersistentStoreWithType:NSSQLiteStoreType 
                 configuration:nil 
-                URL:aStoreURL options:nil error:&anyError];
+                URL:[aStoreURL URLByAppendingPathComponent:@"Notebook.storedata"] options:nil error:&anyError];
     
     if( !store ) {
         NSLog(@"Failed to add persistent store at %@: %@", 
