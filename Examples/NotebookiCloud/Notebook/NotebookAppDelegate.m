@@ -178,7 +178,7 @@ willReplaceStoreWithDownloadedStoreAtURL:(NSURL *)aStoreURL
     BOOL success = [[self persistentStoreCoordinator] 
                     removePersistentStore:
                     [[self persistentStoreCoordinator] 
-                     persistentStoreForURL:aStoreURL] 
+                     persistentStoreForURL:[aStoreURL URLByAppendingPathComponent:@"Notebook.storedata"]]
                     error:&anyError];
     
     if( !success ) {
