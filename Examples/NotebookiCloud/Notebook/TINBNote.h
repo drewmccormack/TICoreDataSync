@@ -20,6 +20,6 @@
 @property (nonatomic, retain) NSString * title;
 @property (nonatomic, retain) NSString * content;
 @property (nonatomic, retain) NSSet* tags;
-@property (nonatomic, retain) TINBImageWrapper *imageWrapper;
+@property (nonatomic, retain) NSImage *image;
 
 @end

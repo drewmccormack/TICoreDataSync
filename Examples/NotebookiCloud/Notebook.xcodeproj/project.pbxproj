@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		07003EAC15B00202004EF645 /* TINBImageWrapper.m in Sources */ = {isa = PBXBuildFile; fileRef = 07003EAB15B00201004EF645 /* TINBImageWrapper.m */; };
 		1382B2701448B93200950A6F /* TICDSSynchronizationOperationManagedObjectContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 1382B26F1448B93200950A6F /* TICDSSynchronizationOperationManagedObjectContext.m */; };
 		1382B2741448B94000950A6F /* TICDSChangeIntegrityStoreManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1382B2731448B94000950A6F /* TICDSChangeIntegrityStoreManager.m */; };
 		383EB805138ACACF00FB580A /* TICDSListOfApplicationRegisteredClientsOperation.m in Sources */ = {isa = PBXBuildFile; fileRef = 38A280C0138AA57000C81675 /* TICDSListOfApplicationRegisteredClientsOperation.m */; };
@@ -90,8 +89,6 @@
 /* Begin PBXFileReference section */
 		07003D1415AECF2D004EF645 /* Notebook.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Notebook.entitlements; sourceTree = "<group>"; };
 		07003EA915B00067004EF645 /* Notebook 2.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Notebook 2.xcdatamodel"; sourceTree = "<group>"; };
-		07003EAA15B00201004EF645 /* TINBImageWrapper.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TINBImageWrapper.h; sourceTree = "<group>"; };
-		07003EAB15B00201004EF645 /* TINBImageWrapper.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TINBImageWrapper.m; sourceTree = "<group>"; };
 		1382B26E1448B93200950A6F /* TICDSSynchronizationOperationManagedObjectContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TICDSSynchronizationOperationManagedObjectContext.h; sourceTree = "<group>"; };
 		1382B26F1448B93200950A6F /* TICDSSynchronizationOperationManagedObjectContext.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TICDSSynchronizationOperationManagedObjectContext.m; sourceTree = "<group>"; };
 		1382B2721448B94000950A6F /* TICDSChangeIntegrityStoreManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TICDSChangeIntegrityStoreManager.h; sourceTree = "<group>"; };
@@ -312,8 +309,6 @@
 				386D4C721371712600020F72 /* TINBTag.m */,
 				386D4C6E1371712600020F72 /* TINBNote.h */,
 				386D4C6F1371712600020F72 /* TINBNote.m */,
-				07003EAA15B00201004EF645 /* TINBImageWrapper.h */,
-				07003EAB15B00201004EF645 /* TINBImageWrapper.m */,
 				386F07D713715D0800D4F31B /* Supporting Files */,
 			);
 			path = Notebook;
@@ -699,7 +694,6 @@
 				38AE077F13EC5E8C002F90A6 /* TICDSFileManagerBasedRemoveAllRemoteSyncDataOperation.m in Sources */,
 				1382B2701448B93200950A6F /* TICDSSynchronizationOperationManagedObjectContext.m in Sources */,
 				1382B2741448B94000950A6F /* TICDSChangeIntegrityStoreManager.m in Sources */,
-				07003EAC15B00202004EF645 /* TINBImageWrapper.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
