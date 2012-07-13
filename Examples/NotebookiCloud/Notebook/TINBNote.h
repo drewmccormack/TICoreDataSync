@@ -12,6 +12,7 @@
 #import "TICoreDataSync.h"
 
 @class TINBTag;
+@class TINBImageWrapper;
 
 @interface TINBNote : TICDSSynchronizedManagedObject {
 @private
@@ -19,5 +20,6 @@
 @property (nonatomic, retain) NSString * title;
 @property (nonatomic, retain) NSString * content;
 @property (nonatomic, retain) NSSet* tags;
+@property (nonatomic, retain) TINBImageWrapper *imageWrapper;
 
 @end

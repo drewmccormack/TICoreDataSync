@@ -247,9 +247,8 @@ shouldBeginSynchronizingAfterManagedObjectContextDidSave:
     [TICDSFileManagerBasedApplicationSyncManager 
      defaultApplicationSyncManager];
     
-    [manager setApplicationContainingDirectoryLocation:
-     [NSURL fileURLWithPath:
-      [@"~/Dropbox" stringByExpandingTildeInPath]]];
+    NSURL *dropboxLocation = self.cloudStoreURL; //[TICDSFileManagerBasedApplicationSyncManager localDropboxDirectoryLocation];
+    [manager setApplicationContainingDirectoryLocation:dropboxLocation];
     
     NSString *clientUuid = [[NSUserDefaults standardUserDefaults] 
                             stringForKey:@"NotebookAppSyncClientUUID"];
@@ -454,7 +453,11 @@ _downloadStoreAfterRegistering;
     }
     
     __persistentStoreCoordinator = [[NSPersistentStoreCoordinator alloc] initWithManagedObjectModel:mom];
-    if (![__persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:url options:nil error:&error]) {
+    NSDictionary *options = [NSDictionary dictionaryWithObjectsAndKeys:
+                                  [NSNumber numberWithBool:YES], NSMigratePersistentStoresAutomaticallyOption,
+                                  [NSNumber numberWithBool:YES], NSInferMappingModelAutomaticallyOption,
+                                  nil];
+    if (![__persistentStoreCoordinator addPersistentStoreWithType:NSSQLiteStoreType configuration:nil URL:url options:options error:&error]) {
         [[NSApplication sharedApplication] presentError:error];
         [__persistentStoreCoordinator release], __persistentStoreCoordinator = nil;
         return nil;

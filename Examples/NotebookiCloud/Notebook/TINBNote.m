@@ -14,6 +14,7 @@
 @dynamic title;
 @dynamic content;
 @dynamic tags;
+@dynamic imageWrapper;
 
 - (void)addTagsObject:(TINBTag *)value {    
     NSSet *changedObjects = [[NSSet alloc] initWithObjects:&value count:1];
