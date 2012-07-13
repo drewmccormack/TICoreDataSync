@@ -51,6 +51,9 @@
     NSString *filePath = [[self localWholeStoreFileLocation] path];
     
     if( [self shouldUseEncryption] ) {
+        BOOL isDir;
+        NSAssert( [self.fileManager fileExistsAtPath:filePath isDirectory:&isDir] && !isDir, @"Encryption not supported when whole store is directory.");
+        
         NSString *tempPath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:[filePath lastPathComponent]];
         
         success = [[self cryptor] encryptFileAtLocation:[NSURL fileURLWithPath:filePath] writingToLocation:[NSURL fileURLWithPath:tempPath] error:&anyError];

@@ -76,14 +76,14 @@
 - (void)applicationSyncManagerDidPauseRegistrationToAskWhetherToUseEncryptionForFirstTimeRegistration:
 (TICDSApplicationSyncManager *)aSyncManager
 {
-    [aSyncManager continueRegisteringWithEncryptionPassword:@"password"];
+    [aSyncManager continueRegisteringWithEncryptionPassword:nil];
 }
 
 - (void)applicationSyncManagerDidPauseRegistrationToRequestPasswordForEncryptedApplicationSyncData:
 (TICDSApplicationSyncManager *)aSyncManager
 {
     //[aSyncManager removeAllSyncDataFromRemote];
-    [aSyncManager continueRegisteringWithEncryptionPassword:@"password"];
+    [aSyncManager continueRegisteringWithEncryptionPassword:nil];
 }
 
 - (TICDSDocumentSyncManager *)applicationSyncManager:
@@ -131,12 +131,17 @@ URLForWholeStoreToUploadForDocumentWithIdentifier:
                    description:(NSString *)aDescription 
                       userInfo:(NSDictionary *)userInfo
 {
-    return [[self applicationFilesDirectory] 
-            URLByAppendingPathComponent:@"Notebook.storedata"];
+    // Upload whole directory, which also includes external binaries
+    return [self applicationFilesDirectory];
+}
+
+- (NSURL *)documentSyncManagerURLForDownloadedStore:(TICDSDocumentSyncManager *)aSyncManager
+{
+    return [self applicationFilesDirectory];
 }
 
 - (void)documentSyncManager:(TICDSDocumentSyncManager *)aSyncManager
-didPauseRegistrationAsRemoteFileStructureDoesNotExistForDocumentWithIdentifier:(NSString *)anIdentifier 
+didPauseRegistrationAsRemoteFileStructureDoesNotExistForDocumentWithIdentifier:(NSString *)anIdentifier
 description:(NSString *)aDescription 
 userInfo:(NSDictionary *)userInfo
 {

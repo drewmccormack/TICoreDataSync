@@ -109,7 +109,7 @@ static TICDSChangeIntegrityStoreManager *sharedChangeIntegrityStoreManager = nil
 	@synchronized(self)
 	{
 		if (sharedChangeIntegrityStoreManager == nil) {
-			[[self alloc] init];
+			sharedChangeIntegrityStoreManager = [[self alloc] init];
 		}
 	}
 
