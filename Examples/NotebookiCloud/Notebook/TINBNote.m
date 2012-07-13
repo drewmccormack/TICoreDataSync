@@ -14,7 +14,7 @@
 @dynamic title;
 @dynamic content;
 @dynamic tags;
-@dynamic image;
+@dynamic imageData;
 
 - (void)addTagsObject:(TINBTag *)value {    
     NSSet *changedObjects = [[NSSet alloc] initWithObjects:&value count:1];
@@ -44,5 +44,19 @@
     [self didChangeValueForKey:@"tags" withSetMutation:NSKeyValueMinusSetMutation usingObjects:value];
 }
 
+-(void)setImage:(NSImage *)image
+{
+    [self willChangeValueForKey:@"image"];
+    self.imageData = [NSKeyedArchiver archivedDataWithRootObject:image];
+    [self didChangeValueForKey:@"image"];
+}
+
+-(NSImage *)image
+{
+    [self willAccessValueForKey:@"image"];
+    id result = ( self.imageData ? [NSKeyedUnarchiver unarchiveObjectWithData:self.imageData] : nil );
+    [self didAccessValueForKey:@"image"];
+    return result;
+}
 
 @end

@@ -1726,7 +1726,7 @@ wGw</bytes>
 													<string key="NSFrame">{{273, 1}, {15, 292}}</string>
 													<reference key="NSSuperview" ref="353227368"/>
 													<reference key="NSWindow"/>
-													<reference key="NSNextKeyView" ref="98887038"/>
+													<reference key="NSNextKeyView" ref="455715224"/>
 													<bool key="NSAllowsLogicalLayoutDirection">NO</bool>
 													<reference key="NSTarget" ref="353227368"/>
 													<string key="NSAction">_doScroller:</string>
@@ -1837,7 +1837,7 @@ wGw</bytes>
 											</object>
 											<bool key="NSAllowsLogicalLayoutDirection">NO</bool>
 										</object>
-										<object class="NSImageView" id="98887038">
+										<object class="NSImageView" id="455715224">
 											<reference key="NSNextResponder" ref="826836059"/>
 											<int key="NSvFlags">290</int>
 											<object class="NSMutableSet" key="NSDragTypes">
@@ -1858,7 +1858,7 @@ wGw</bytes>
 											<reference key="NSNextKeyView" ref="510205267"/>
 											<string key="NSReuseIdentifierKey">_NS:9</string>
 											<bool key="NSEnabled">YES</bool>
-											<object class="NSImageCell" key="NSCell" id="42627634">
+											<object class="NSImageCell" key="NSCell" id="106698264">
 												<int key="NSCellFlags">404750336</int>
 												<int key="NSCellFlags2">0</int>
 												<string key="NSCellIdentifier">_NS:9</string>
@@ -3581,10 +3581,10 @@ wGw</bytes>
 				<object class="IBConnectionRecord">
 					<object class="IBBindingConnection" key="connection">
 						<string key="label">value: selection.image</string>
-						<reference key="source" ref="98887038"/>
+						<reference key="source" ref="455715224"/>
 						<reference key="destination" ref="960169988"/>
 						<object class="NSNibBindingConnector" key="connector">
-							<reference key="NSSource" ref="98887038"/>
+							<reference key="NSSource" ref="455715224"/>
 							<reference key="NSDestination" ref="960169988"/>
 							<string key="NSLabel">value: selection.image</string>
 							<string key="NSBinding">value</string>
@@ -4667,7 +4667,7 @@ wGw</bytes>
 							<reference ref="790660178"/>
 							<reference ref="353227368"/>
 							<reference ref="312331464"/>
-							<reference ref="98887038"/>
+							<reference ref="455715224"/>
 						</object>
 						<reference key="parent" ref="439893737"/>
 					</object>
@@ -5020,17 +5020,17 @@ wGw</bytes>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">744</int>
-						<reference key="object" ref="98887038"/>
+						<reference key="object" ref="455715224"/>
 						<object class="NSMutableArray" key="children">
 							<bool key="EncodedWithXMLCoder">YES</bool>
-							<reference ref="42627634"/>
+							<reference ref="106698264"/>
 						</object>
 						<reference key="parent" ref="946201368"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">745</int>
-						<reference key="object" ref="42627634"/>
-						<reference key="parent" ref="98887038"/>
+						<reference key="object" ref="106698264"/>
+						<reference key="parent" ref="455715224"/>
 					</object>
 				</object>
 			</object>
