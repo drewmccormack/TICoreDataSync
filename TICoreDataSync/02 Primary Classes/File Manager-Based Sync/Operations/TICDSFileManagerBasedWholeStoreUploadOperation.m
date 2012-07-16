@@ -13,7 +13,7 @@
 
 - (void)checkWhetherThisClientTemporaryWholeStoreDirectoryExists
 {
-    TICDSRemoteFileStructureExistsResponseType status = [[self fileManager] fileExistsAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath]] ? TICDSRemoteFileStructureExistsResponseTypeDoesExist : TICDSRemoteFileStructureExistsResponseTypeDoesNotExist;
+    TICDSRemoteFileStructureExistsResponseType status = [self fileExistsAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath]] ? TICDSRemoteFileStructureExistsResponseTypeDoesExist : TICDSRemoteFileStructureExistsResponseTypeDoesNotExist;
     
     [self discoveredStatusOfThisClientTemporaryWholeStoreDirectory:status];
 }
@@ -22,7 +22,7 @@
 {
     NSError *anyError = nil;
     
-    BOOL success = [[self fileManager] removeItemAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -35,7 +35,7 @@
 {
     NSError *anyError = nil;
     
-    BOOL success = [[self fileManager] createDirectoryAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
+    BOOL success = [self createDirectoryAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -66,7 +66,7 @@
         filePath = tempPath;
     }
     
-    success = [[self fileManager] copyItemAtPath:filePath toPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryWholeStoreFilePath] error:&anyError];
+    success = [self copyItemAtPath:filePath toPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryWholeStoreFilePath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -79,7 +79,7 @@
 {
     NSError *anyError = nil;
     
-    BOOL success = [[self fileManager] copyItemAtPath:[[self localAppliedSyncChangeSetsFileLocation] path] toPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryAppliedSyncChangeSetsFilePath] error:&anyError];
+    BOOL success = [self copyItemAtPath:[[self localAppliedSyncChangeSetsFileLocation] path] toPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryAppliedSyncChangeSetsFilePath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -90,7 +90,7 @@
 
 - (void)checkWhetherThisClientWholeStoreDirectoryExists
 {
-    TICDSRemoteFileStructureExistsResponseType status = [[self fileManager] fileExistsAtPath:[self thisDocumentWholeStoreThisClientDirectoryPath]] ? TICDSRemoteFileStructureExistsResponseTypeDoesExist : TICDSRemoteFileStructureExistsResponseTypeDoesNotExist;
+    TICDSRemoteFileStructureExistsResponseType status = [self fileExistsAtPath:[self thisDocumentWholeStoreThisClientDirectoryPath]] ? TICDSRemoteFileStructureExistsResponseTypeDoesExist : TICDSRemoteFileStructureExistsResponseTypeDoesNotExist;
     
     [self discoveredStatusOfThisClientWholeStoreDirectory:status];
 }
@@ -99,7 +99,7 @@
 {
     NSError *anyError = nil;
     
-    BOOL success = [[self fileManager] removeItemAtPath:[self thisDocumentWholeStoreThisClientDirectoryPath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self thisDocumentWholeStoreThisClientDirectoryPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -112,7 +112,7 @@
 {
     NSError *anyError = nil;
     
-    BOOL success = [[self fileManager] copyItemAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] toPath:[self thisDocumentWholeStoreThisClientDirectoryPath] error:&anyError];
+    BOOL success = [self copyItemAtPath:[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] toPath:[self thisDocumentWholeStoreThisClientDirectoryPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

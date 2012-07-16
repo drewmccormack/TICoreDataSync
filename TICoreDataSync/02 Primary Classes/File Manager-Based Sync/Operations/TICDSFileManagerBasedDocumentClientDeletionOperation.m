@@ -15,7 +15,7 @@
 {
     NSString *path = [[self thisDocumentSyncChangesDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]];
     
-    if( [[self fileManager] fileExistsAtPath:path] ) {
+    if( [self fileExistsAtPath:path] ) {
         [self discoveredStatusOfClientDirectoryInDocumentSyncChangesDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfClientDirectoryInDocumentSyncChangesDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -26,7 +26,7 @@
 {
     NSString *path = [[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension];
     
-    if( [[self fileManager] fileExistsAtPath:path] ) {
+    if( [self fileExistsAtPath:path] ) {
         [self discoveredStatusOfClientIdentifierFileInDocumentDeletedClientsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfClientIdentifierFileInDocumentDeletedClientsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -38,7 +38,7 @@
     NSString *filePath = [[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:filePath error:&anyError];
+    BOOL success = [self removeItemAtPath:filePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -54,7 +54,7 @@
     NSString *finalFilePath = [[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] copyItemAtPath:deviceInfoFilePath toPath:finalFilePath error:&anyError];
+    BOOL success = [self copyItemAtPath:deviceInfoFilePath toPath:finalFilePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -68,7 +68,7 @@
     NSString *directoryPath = [[self thisDocumentSyncChangesDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:directoryPath error:&anyError];
+    BOOL success = [self removeItemAtPath:directoryPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -82,7 +82,7 @@
     NSString *directoryPath = [[self thisDocumentSyncCommandsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:directoryPath error:&anyError];
+    BOOL success = [self removeItemAtPath:directoryPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -95,7 +95,7 @@
 {
     NSString *filePath = [[[self thisDocumentRecentSyncsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]] stringByAppendingPathExtension:TICDSRecentSyncFileExtension];
     
-    if( [[self fileManager] fileExistsAtPath:filePath] ) {
+    if( [self fileExistsAtPath:filePath] ) {
         [self discoveredStatusOfClientIdentifierFileInDocumentRecentSyncsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfClientIdentifierFileInDocumentRecentSyncsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -107,7 +107,7 @@
     NSString *filePath = [[[self thisDocumentRecentSyncsDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]] stringByAppendingPathExtension:TICDSRecentSyncFileExtension];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:filePath error:&anyError];
+    BOOL success = [self removeItemAtPath:filePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -120,7 +120,7 @@
 {
     NSString *directoryPath = [[self thisDocumentWholeStoreDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]];
     
-    if( [[self fileManager] fileExistsAtPath:directoryPath] ) {
+    if( [self fileExistsAtPath:directoryPath] ) {
         [self discoveredStatusOfClientDirectoryInDocumentWholeStoreDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfClientDirectoryInDocumentWholeStoreDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -132,7 +132,7 @@
     NSString *directoryPath = [[self thisDocumentWholeStoreDirectoryPath] stringByAppendingPathComponent:[self identifierOfClientToBeDeleted]];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:directoryPath error:&anyError];
+    BOOL success = [self removeItemAtPath:directoryPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

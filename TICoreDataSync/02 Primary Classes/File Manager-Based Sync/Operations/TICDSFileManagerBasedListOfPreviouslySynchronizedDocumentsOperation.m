@@ -14,7 +14,7 @@
 - (void)buildArrayOfDocumentIdentifiers
 {
     NSError *anyError = nil;
-    NSArray *contentsOfDirectory = [[self fileManager] contentsOfDirectoryAtPath:[self documentsDirectoryPath] error:&anyError];
+    NSArray *contentsOfDirectory = [self contentsOfDirectoryAtPath:[self documentsDirectoryPath] error:&anyError];
     
     if( !contentsOfDirectory ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -66,7 +66,7 @@
 - (void)fetchLastSynchronizationDateForDocumentWithSyncID:(NSString *)aSyncID
 {
     NSError *anyError = nil;
-    NSDictionary *dictionary = [[self fileManager] attributesOfItemAtPath:[self pathToDocumentRecentSyncsDirectoryForIdentifier:aSyncID] error:&anyError];
+    NSDictionary *dictionary = [self attributesOfItemAtPath:[self pathToDocumentRecentSyncsDirectoryForIdentifier:aSyncID] error:&anyError];
     
     if( !dictionary ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

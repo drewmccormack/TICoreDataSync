@@ -14,7 +14,7 @@
 - (void)checkForMostRecentClientWholeStore
 {
     NSError *anyError = nil;
-    NSArray *clientIdentifiers = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentWholeStoreDirectoryPath] error:&anyError];
+    NSArray *clientIdentifiers = [self contentsOfDirectoryAtPath:[self thisDocumentWholeStoreDirectoryPath] error:&anyError];
     
     if( !clientIdentifiers ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -31,7 +31,7 @@
             continue;
         }
         
-        attributes = [[self fileManager] attributesOfItemAtPath:[self pathToWholeStoreFileForClientWithIdentifier:eachIdentifier] error:&anyError];
+        attributes = [self attributesOfItemAtPath:[self pathToWholeStoreFileForClientWithIdentifier:eachIdentifier] error:&anyError];
         
         if( !attributes ) {
             continue;
@@ -72,7 +72,7 @@
     
     if( ![self shouldUseEncryption] ) {
         // just copy the file straight across
-        success = [[self fileManager] copyItemAtPath:wholeStorePath toPath:[[self localWholeStoreFileLocation] path] error:&anyError];
+        success = [self copyItemAtPath:wholeStorePath toPath:[[self localWholeStoreFileLocation] path] error:&anyError];
         
         if( !success ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -85,7 +85,7 @@
     // otherwise, copy the file to temp location, and decrypt it
     NSString *tmpStorePath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:[wholeStorePath lastPathComponent]];
     
-    success = [[self fileManager] copyItemAtPath:wholeStorePath toPath:tmpStorePath error:&anyError];
+    success = [self copyItemAtPath:wholeStorePath toPath:tmpStorePath error:&anyError];
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
         [self downloadedWholeStoreFileWithSuccess:success];
@@ -103,13 +103,13 @@
 
 - (void)downloadAppliedSyncChangeSetsFile
 {
-    if( ![[self fileManager] fileExistsAtPath:[self pathToAppliedSyncChangesFileForClientWithIdentifier:[self requestedWholeStoreClientIdentifier]]] ) {
+    if( ![self fileExistsAtPath:[self pathToAppliedSyncChangesFileForClientWithIdentifier:[self requestedWholeStoreClientIdentifier]]] ) {
         [self downloadedAppliedSyncChangeSetsFileWithSuccess:YES];
         return;
     }
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] copyItemAtPath:[self pathToAppliedSyncChangesFileForClientWithIdentifier:[self requestedWholeStoreClientIdentifier]] toPath:[[self localAppliedSyncChangeSetsFileLocation] path] error:&anyError];
+    BOOL success = [self copyItemAtPath:[self pathToAppliedSyncChangesFileForClientWithIdentifier:[self requestedWholeStoreClientIdentifier]] toPath:[[self localAppliedSyncChangeSetsFileLocation] path] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -123,7 +123,7 @@
     NSString *integrityDirectoryPath = [[self thisDocumentDirectoryPath] stringByAppendingPathComponent:TICDSIntegrityKeyDirectoryName];
     
     NSError *anyError = nil;
-    NSArray *contents = [[self fileManager] contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
+    NSArray *contents = [self contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
     
     if( !contents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

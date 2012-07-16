@@ -38,6 +38,7 @@
     NSError *_error;
     
     NSFileManager *_fileManager;
+    NSFileCoordinator *_fileCoordinator;
     NSString *_tempFileDirectoryPath;
     
     NSString *_clientIdentifier;
@@ -69,6 +70,29 @@
 /** Call this method if the operation is cancelled midway through its work. This will set the required values for `isExecuting` and `isFinished`. */
 - (void)operationWasCancelled;
 
+/** @name Coordinated I/O */
+
+/** Copy a file or directory using coordinated reads/writes. **/
+- (BOOL)copyItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error;
+
+/** Move a file or directory using coordinated reads/writes. **/
+- (BOOL)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error;
+
+/** Remove a file or directory using coordinated reads/writes. **/
+- (BOOL)removeItemAtPath:(NSString *)fromPath error:(NSError **)error;
+
+/** Create directory using coordinated write **/
+- (BOOL)createDirectoryAtPath:(NSString *)path withIntermediateDirectories:(BOOL)createIntermediates attributes:(NSDictionary *)attributes error:(NSError **)error;
+
+/** Check for existence of file or directory using coordinated read **/
+- (BOOL)fileExistsAtPath:(NSString *)path;
+
+/** Get directory contents using coordinated read **/
+- (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error;
+
+/** Get item attributes using coordinated read **/
+- (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error;
+
 /** @name Properties */
 
 /** Used to indicate whether the operation should encrypt files stored on the remote. */
@@ -97,6 +121,9 @@
 
 /** An `NSFileManager` object suitable for use by this operation. */
 @property (nonatomic, readonly, retain) NSFileManager *fileManager;
+
+/** An `NSFileCoordinator` object suitable for use by this operation. */
+@property (nonatomic, readonly, retain) NSFileCoordinator *fileCoordinator;
 
 /** The path to a directory inside `NSTemporaryDirectory()` guaranteed to be unique to this operation, created when path first requested and removed when operation finishes. */
 @property (nonatomic, retain) NSString *tempFileDirectoryPath;

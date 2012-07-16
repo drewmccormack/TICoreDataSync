@@ -24,7 +24,7 @@
             NSString *thisPath = [aDirectoryPath stringByAppendingPathComponent:eachName];
             
             // create directory
-            BOOL success = [[self fileManager] createDirectoryAtPath:thisPath withIntermediateDirectories:YES attributes:nil error:&anyError];
+            BOOL success = [self createDirectoryAtPath:thisPath withIntermediateDirectories:YES attributes:nil error:&anyError];
             if( !success ) {
                 [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
                 return NO;
@@ -45,7 +45,7 @@
 #pragma mark Overridden Global App Directory Methods
 - (void)checkWhetherRemoteGlobalAppDirectoryExists
 {
-    if( [[self fileManager] fileExistsAtPath:[self applicationDirectoryPath]] ) {
+    if( [self fileExistsAtPath:[self applicationDirectoryPath]] ) {
         [self discoveredStatusOfRemoteGlobalAppDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfRemoteGlobalAppDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -71,7 +71,7 @@
     NSString *remotePath = [[self applicationDirectoryPath] stringByAppendingPathComponent:[aPath lastPathComponent]];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] copyItemAtPath:aPath toPath:remotePath error:&anyError];
+    BOOL success = [self copyItemAtPath:aPath toPath:remotePath error:&anyError];
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
     }
@@ -81,7 +81,7 @@
 
 - (void)checkWhetherSaltFileExists
 {
-    if( [[self fileManager] fileExistsAtPath:[self encryptionDirectorySaltDataFilePath]] ) {
+    if( [self fileExistsAtPath:[self encryptionDirectorySaltDataFilePath]] ) {
         [self discoveredStatusOfSaltFile:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfSaltFile:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -161,7 +161,7 @@
 #pragma mark Overridden Client Device Directory Methods
 - (void)checkWhetherRemoteClientDeviceDirectoryExists
 {
-    if( [[self fileManager] fileExistsAtPath:[self clientDevicesThisClientDeviceDirectoryPath]] ) {
+    if( [self fileExistsAtPath:[self clientDevicesThisClientDeviceDirectoryPath]] ) {
         [self discoveredStatusOfRemoteClientDeviceDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfRemoteClientDeviceDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -171,7 +171,7 @@
 - (void)createRemoteClientDeviceDirectory
 {
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] createDirectoryAtPath:[self clientDevicesThisClientDeviceDirectoryPath] withIntermediateDirectories:YES attributes:nil error:&anyError];
+    BOOL success = [self createDirectoryAtPath:[self clientDevicesThisClientDeviceDirectoryPath] withIntermediateDirectories:YES attributes:nil error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

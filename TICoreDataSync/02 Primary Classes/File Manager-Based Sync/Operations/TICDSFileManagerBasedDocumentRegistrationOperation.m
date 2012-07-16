@@ -24,7 +24,7 @@
             NSString *thisPath = [aPath stringByAppendingPathComponent:eachName];
             
             // create directory
-            BOOL success = [[self fileManager] createDirectoryAtPath:thisPath withIntermediateDirectories:YES attributes:nil error:&anyError];
+            BOOL success = [self createDirectoryAtPath:thisPath withIntermediateDirectories:YES attributes:nil error:&anyError];
             if( !success ) {
                 [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
                 return NO;
@@ -45,7 +45,7 @@
 #pragma mark Overridden Document Methods
 - (void)checkWhetherRemoteDocumentDirectoryExists
 {
-    if( [[self fileManager] fileExistsAtPath:[self thisDocumentDirectoryPath]] ) {
+    if( [self fileExistsAtPath:[self thisDocumentDirectoryPath]] ) {
         [self discoveredStatusOfRemoteDocumentDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfRemoteDocumentDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -54,7 +54,7 @@
 
 - (void)checkWhetherRemoteDocumentWasDeleted
 {
-    if( [[self fileManager] fileExistsAtPath:[self deletedDocumentsThisDocumentIdentifierPlistPath]] ) {
+    if( [self fileExistsAtPath:[self deletedDocumentsThisDocumentIdentifierPlistPath]] ) {
         [self discoveredDeletionStatusOfRemoteDocument:TICDSRemoteFileStructureDeletionResponseTypeDeleted];
     } else {
         [self discoveredDeletionStatusOfRemoteDocument:TICDSRemoteFileStructureDeletionResponseTypeNotDeleted];
@@ -135,7 +135,7 @@
     NSString *integrityDirectoryPath = [[self thisDocumentDirectoryPath] stringByAppendingPathComponent:TICDSIntegrityKeyDirectoryName];
     
     NSError *anyError = nil;
-    NSArray *contents = [[self fileManager] contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
+    NSArray *contents = [self contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
     
     if( !contents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -159,7 +159,7 @@
 {
     NSError *anyError = nil;
     
-    NSArray *contents = [[self fileManager] contentsOfDirectoryAtPath:[self clientDevicesDirectoryPath] error:&anyError];
+    NSArray *contents = [self contentsOfDirectoryAtPath:[self clientDevicesDirectoryPath] error:&anyError];
     
     if( !contents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -176,7 +176,7 @@
     
     NSString *finalFilePath = [[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:anIdentifier] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension];
     
-    BOOL success = [[self fileManager] copyItemAtPath:deviceInfoPlistPath toPath:finalFilePath error:&anyError];
+    BOOL success = [self copyItemAtPath:deviceInfoPlistPath toPath:finalFilePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -188,7 +188,7 @@
 - (void)deleteDocumentInfoPlistFromDeletedDocumentsDirectory
 {
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:[self deletedDocumentsThisDocumentIdentifierPlistPath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self deletedDocumentsThisDocumentIdentifierPlistPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -201,7 +201,7 @@
 #pragma mark Overridden Client Device Directories
 - (void)checkWhetherClientDirectoryExistsInRemoteDocumentSyncChangesDirectory
 {
-    if( [[self fileManager] fileExistsAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath]] ) {
+    if( [self fileExistsAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath]] ) {
         [self discoveredStatusOfClientDirectoryInRemoteDocumentSyncChangesDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfClientDirectoryInRemoteDocumentSyncChangesDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -210,7 +210,7 @@
 
 - (void)checkWhetherClientWasDeletedFromRemoteDocument
 {
-    if( [[self fileManager] fileExistsAtPath:[[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self clientIdentifier]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension]] ) {
+    if( [self fileExistsAtPath:[[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self clientIdentifier]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension]] ) {
         [self discoveredDeletionStatusOfClient:TICDSRemoteFileStructureDeletionResponseTypeDeleted];
     } else {
         [self discoveredDeletionStatusOfClient:TICDSRemoteFileStructureDeletionResponseTypeNotDeleted];
@@ -222,7 +222,7 @@
     NSString *filePath = [[[self thisDocumentDeletedClientsDirectoryPath] stringByAppendingPathComponent:[self clientIdentifier]] stringByAppendingPathExtension:TICDSDeviceInfoPlistExtension];
     
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:filePath error:&anyError];
+    BOOL success = [self removeItemAtPath:filePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -235,7 +235,7 @@
 {
     NSError *anyError = nil;
     BOOL success = NO;
-    success = [[self fileManager] createDirectoryAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
+    success = [self createDirectoryAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -243,7 +243,7 @@
         return;
     }
     
-    success = [[self fileManager] createDirectoryAtPath:[self thisDocumentSyncCommandsThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
+    success = [self createDirectoryAtPath:[self thisDocumentSyncCommandsThisClientDirectoryPath] withIntermediateDirectories:NO attributes:nil error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

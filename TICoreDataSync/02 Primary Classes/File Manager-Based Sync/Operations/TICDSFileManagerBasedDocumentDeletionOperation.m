@@ -14,7 +14,7 @@
 #pragma mark - Overridden Methods
 - (void)checkWhetherIdentifiedDocumentDirectoryExists
 {
-    if( [[self fileManager] fileExistsAtPath:[self documentDirectoryPath]] ) {
+    if( [self fileExistsAtPath:[self documentDirectoryPath]] ) {
         [self discoveredStatusOfIdentifiedDocumentDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfIdentifiedDocumentDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -23,7 +23,7 @@
 
 - (void)checkForExistingIdentifierPlistInDeletedDocumentsDirectory
 {
-    if( [[self fileManager] fileExistsAtPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath]] ) {
+    if( [self fileExistsAtPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath]] ) {
         [self discoveredStatusOfIdentifierPlistInDeletedDocumentsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesExist];
     } else {
         [self discoveredStatusOfIdentifierPlistInDeletedDocumentsDirectory:TICDSRemoteFileStructureExistsResponseTypeDoesNotExist];
@@ -33,7 +33,7 @@
 - (void)deleteDocumentInfoPlistFromDeletedDocumentsDirectory
 {
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -45,7 +45,7 @@
 - (void)copyDocumentInfoPlistToDeletedDocumentsDirectory
 {
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] copyItemAtPath:[self documentInfoPlistFilePath] toPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath] error:&anyError];
+    BOOL success = [self copyItemAtPath:[self documentInfoPlistFilePath] toPath:[self deletedDocumentsDirectoryIdentifierPlistFilePath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -57,7 +57,7 @@
 - (void)deleteDocumentDirectory
 {
     NSError *anyError = nil;
-    BOOL success = [[self fileManager] removeItemAtPath:[self documentDirectoryPath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self documentDirectoryPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

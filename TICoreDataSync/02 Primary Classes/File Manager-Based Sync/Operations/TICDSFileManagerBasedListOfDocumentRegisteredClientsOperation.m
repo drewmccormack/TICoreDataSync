@@ -14,7 +14,7 @@
 - (void)fetchArrayOfClientUUIDStrings
 {
     NSError *anyError = nil;
-    NSArray *files = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentSyncChangesDirectoryPath] error:&anyError];
+    NSArray *files = [self contentsOfDirectoryAtPath:[self thisDocumentSyncChangesDirectoryPath] error:&anyError];
     
     if( !files ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -57,7 +57,7 @@
         filePath = [[self thisDocumentRecentSyncsDirectoryPath] stringByAppendingPathComponent:eachIdentifier];
         filePath = [filePath stringByAppendingPathExtension:TICDSRecentSyncFileExtension];
         
-        attributes = [[self fileManager] attributesOfItemAtPath:filePath error:&anyError];
+        attributes = [self attributesOfItemAtPath:filePath error:&anyError];
         
         if( !attributes ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -71,7 +71,7 @@
 {
     NSString *filePath = [self pathToWholeStoreFileForDeviceWithIdentifier:anIdentifier];
     NSError *anyError = nil;
-    NSDictionary *attributes = [[self fileManager] attributesOfItemAtPath:filePath error:&anyError];
+    NSDictionary *attributes = [self attributesOfItemAtPath:filePath error:&anyError];
     
     if( !attributes ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

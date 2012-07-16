@@ -14,7 +14,7 @@
 - (void)findOutDateOfOldestWholeStore
 {
     NSError *anyError = nil;
-    NSArray *clientIdentifiers = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentWholeStoreDirectoryPath] error:&anyError];
+    NSArray *clientIdentifiers = [self contentsOfDirectoryAtPath:[self thisDocumentWholeStoreDirectoryPath] error:&anyError];
     
     if( !clientIdentifiers ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -30,7 +30,7 @@
             continue;
         }
         
-        attributes = [[self fileManager] attributesOfItemAtPath:[self pathToWholeStoreFileForClientWithIdentifier:eachIdentifier] error:&anyError];
+        attributes = [self attributesOfItemAtPath:[self pathToWholeStoreFileForClientWithIdentifier:eachIdentifier] error:&anyError];
         
         if( !attributes ) {
             continue;
@@ -63,7 +63,7 @@
 {
     NSError *anyError = nil;
     
-    NSArray *fileNames = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentRecentSyncsDirectoryPath] error:&anyError];
+    NSArray *fileNames = [self contentsOfDirectoryAtPath:[self thisDocumentRecentSyncsDirectoryPath] error:&anyError];
     
     if( !fileNames ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -83,7 +83,7 @@
     for( NSString *eachFileName in fileNames ) {
         filePath = [[self thisDocumentRecentSyncsDirectoryPath] stringByAppendingPathComponent:eachFileName];
         
-        attributes = [[self fileManager] attributesOfItemAtPath:filePath error:&anyError];
+        attributes = [self attributesOfItemAtPath:filePath error:&anyError];
         if( !attributes ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
             [self foundOutLeastRecentClientSyncDate:nil];
@@ -102,7 +102,7 @@
 {
     NSError *anyError = nil;
     
-    NSArray *fileNames = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath] error:&anyError];
+    NSArray *fileNames = [self contentsOfDirectoryAtPath:[self thisDocumentSyncChangesThisClientDirectoryPath] error:&anyError];
     
     if( !fileNames ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -117,14 +117,14 @@
     for( NSString *eachFileName in fileNames ) {
         filePath = [[self thisDocumentSyncChangesThisClientDirectoryPath] stringByAppendingPathComponent:eachFileName];
         
-        attributes = [[self fileManager] attributesOfItemAtPath:filePath error:&anyError];
+        attributes = [self attributesOfItemAtPath:filePath error:&anyError];
         if( !attributes ) {
             success = NO;
             break;
         }
         
         if( [(NSDate *)[attributes valueForKey:NSFileModificationDate] compare:[self earliestDateForFilesToKeep]] == NSOrderedAscending ) {
-            success = [[self fileManager] removeItemAtPath:filePath error:&anyError];
+            success = [self removeItemAtPath:filePath error:&anyError];
         }
         
         if( !success ) {

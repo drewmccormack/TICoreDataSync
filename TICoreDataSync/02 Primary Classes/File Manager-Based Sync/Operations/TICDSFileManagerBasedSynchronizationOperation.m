@@ -16,7 +16,7 @@
     NSString *integrityDirectoryPath = [[self thisDocumentDirectoryPath] stringByAppendingPathComponent:TICDSIntegrityKeyDirectoryName];
     
     NSError *anyError = nil;
-    NSArray *contents = [[self fileManager] contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
+    NSArray *contents = [self contentsOfDirectoryAtPath:integrityDirectoryPath error:&anyError];
     
     if( !contents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeSynchronizationFailedBecauseIntegrityKeyDirectoryIsMissing underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -41,7 +41,7 @@
 - (void)buildArrayOfClientDeviceIdentifiers
 {
     NSError *anyError = nil;
-    NSArray *directoryContents = [[self fileManager] contentsOfDirectoryAtPath:[self thisDocumentSyncChangesDirectoryPath] error:&anyError];
+    NSArray *directoryContents = [self contentsOfDirectoryAtPath:[self thisDocumentSyncChangesDirectoryPath] error:&anyError];
     
     if( !directoryContents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -82,7 +82,7 @@
     
     NSString *uploadPath = [[self thisDocumentSyncChangesThisClientDirectoryPath] stringByAppendingPathComponent:[[aLocation path] lastPathComponent]];
     
-    success = [[self fileManager] moveItemAtPath:[aLocation path] toPath:uploadPath error:&anyError];
+    success = [self moveItemAtPath:[aLocation path] toPath:uploadPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -94,7 +94,7 @@
 - (void)buildArrayOfSyncChangeSetIdentifiersForClientIdentifier:(NSString *)anIdentifier
 {
     NSError *anyError = nil;
-    NSArray *contents = [[self fileManager] contentsOfDirectoryAtPath:[self pathToSyncChangesDirectoryForClientWithIdentifier:anIdentifier] error:&anyError];
+    NSArray *contents = [self contentsOfDirectoryAtPath:[self pathToSyncChangesDirectoryForClientWithIdentifier:anIdentifier] error:&anyError];
     
     if( !contents ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -120,7 +120,7 @@
     
     // Get modification date first
     NSDate *modificationDate = nil;
-    NSDictionary *attributes = [[self fileManager] attributesOfItemAtPath:remoteFileToFetch error:&anyError];
+    NSDictionary *attributes = [self attributesOfItemAtPath:remoteFileToFetch error:&anyError];
     if( !attributes ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
         [self fetchedSyncChangeSetWithIdentifier:aChangeSetIdentifier forClientIdentifier:aClientIdentifier modificationDate:modificationDate withSuccess:NO];
@@ -136,7 +136,7 @@
         destinationPath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:[destinationPath lastPathComponent]];
     }
     
-    BOOL success = [[self fileManager] copyItemAtPath:remoteFileToFetch toPath:destinationPath error:&anyError];
+    BOOL success = [self copyItemAtPath:remoteFileToFetch toPath:destinationPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -166,8 +166,8 @@
     NSError *anyError = nil;
     BOOL success = YES;
     
-    if( [[self fileManager] fileExistsAtPath:remoteFile] ) {
-        success = [[self fileManager] removeItemAtPath:remoteFile error:&anyError]; 
+    if( [self fileExistsAtPath:remoteFile] ) {
+        success = [self removeItemAtPath:remoteFile error:&anyError]; 
     }
     
     if( !success ) {
@@ -176,7 +176,7 @@
         return;
     }
     
-    success = [[self fileManager] copyItemAtPath:[aLocation path] toPath:remoteFile error:&anyError];
+    success = [self copyItemAtPath:[aLocation path] toPath:remoteFile error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

@@ -78,7 +78,7 @@
 {
     // cleanup temporary directory, if necessary
     if( _tempFileDirectoryPath ) {
-        [[self fileManager] removeItemAtPath:_tempFileDirectoryPath error:nil];
+        [self removeItemAtPath:_tempFileDirectoryPath error:NULL];
     }
     
     if( success ) {
@@ -135,6 +135,15 @@
     return _fileManager;
 }
 
+- (NSFileCoordinator *)fileCoordinator
+{
+    if( _fileCoordinator ) return _fileCoordinator;
+    
+    _fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+    
+    return _fileCoordinator;
+}
+
 #pragma mark -
 #pragma mark Initialization and Deallocation
 - (id)initWithDelegate:(NSObject <TICDSOperationDelegate> *)aDelegate
@@ -157,6 +166,7 @@
     [_error release], _error = nil;
     [_clientIdentifier release], _clientIdentifier = nil;
     [_fileManager release], _fileManager = nil;
+    [_fileCoordinator release], _fileCoordinator = nil;
     [_tempFileDirectoryPath release], _tempFileDirectoryPath = nil;
 
     [super dealloc];
@@ -186,6 +196,94 @@
 }
 
 #pragma mark -
+#pragma mark Coordinated I/O
+
+- (BOOL)copyItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error
+{
+    __block NSError *anyError = nil;
+    NSURL *readURL = [NSURL fileURLWithPath:fromPath];
+    NSURL *writeURL = [NSURL fileURLWithPath:toPath];
+    __block BOOL success = NO;
+    [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+        success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return success;
+}
+
+- (BOOL)moveItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error
+{
+    __block NSError *anyError = nil;
+    NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
+    NSURL *toURL = [NSURL fileURLWithPath:toPath];
+    __block BOOL success = NO;    
+    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:0 writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+        success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
+        [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
+    }];
+    if ( error ) *error = anyError;
+    return success;
+}
+
+- (BOOL)removeItemAtPath:(NSString *)fromPath error:(NSError **)error
+{
+    NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
+    __block BOOL success = NO;
+    __block NSError *anyError = nil;
+    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting error:&anyError byAccessor:^(NSURL *newURL) {
+        success = [[self fileManager] removeItemAtURL:newURL error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return success;
+}
+
+- (BOOL)fileExistsAtPath:(NSString *)fromPath
+{
+    NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
+    __block BOOL result = NO;
+    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
+        result = [[self fileManager] fileExistsAtPath:newURL.path];
+    }];
+    return result;
+}
+
+- (BOOL)createDirectoryAtPath:(NSString *)path withIntermediateDirectories:(BOOL)createIntermediates attributes:(NSDictionary *)attributes error:(NSError **)error
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block BOOL success = NO;
+    __block NSError *anyError = nil;
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        success = [[self fileManager] createDirectoryAtPath:newURL.path withIntermediateDirectories:createIntermediates attributes:attributes error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return success;
+}
+
+- (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block NSError *anyError;
+    __block NSArray *result = nil;
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return result;
+}
+
+- (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block NSError *anyError;
+    __block NSDictionary *result = nil;
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        result = [[self fileManager] attributesOfItemAtPath:newURL.path error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return result;
+}
+
+#pragma mark -
 #pragma mark Properties
 @synthesize shouldUseEncryption = _shouldUseEncryption;
 @synthesize cryptor = _cryptor;
@@ -195,6 +293,7 @@
 @synthesize isFinished = _isFinished;
 @synthesize error = _error;
 @synthesize fileManager = _fileManager;
+@synthesize fileCoordinator = _fileCoordinator;
 @synthesize tempFileDirectoryPath = _tempFileDirectoryPath;
 @synthesize clientIdentifier = _clientIdentifier;
 

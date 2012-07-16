@@ -15,13 +15,13 @@
 {
     NSError *anyError = nil;
     
-    if( ![[self fileManager] fileExistsAtPath:[self applicationDirectoryPath]] ) {
+    if( ![self fileExistsAtPath:[self applicationDirectoryPath]] ) {
         // directory doesn't exist to delete, so deletion is 'complete'
         [self removedRemoteSyncDataDirectoryWithSuccess:YES];
         return;
     }
     
-    BOOL success = [[self fileManager] removeItemAtPath:[self applicationDirectoryPath] error:&anyError];
+    BOOL success = [self removeItemAtPath:[self applicationDirectoryPath] error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
