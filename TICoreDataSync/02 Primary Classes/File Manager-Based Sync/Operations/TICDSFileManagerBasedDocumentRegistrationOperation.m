@@ -81,7 +81,7 @@
     NSString *finalFilePath = [[self thisDocumentDirectoryPath] stringByAppendingPathComponent:TICDSDocumentInfoPlistFilenameWithExtension];
     
     if( ![self shouldUseEncryption] ) {
-        success = [aDictionary writeToFile:finalFilePath atomically:NO];
+        success = [self writeObject:aDictionary toFile:finalFilePath];
         
         if( !success ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError classAndMethod:__PRETTY_FUNCTION__]];
@@ -94,7 +94,7 @@
     // if encryption, save to temporary directory first, then encrypt, writing directly to final location
     NSString *tmpFilePath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:TICDSDocumentInfoPlistFilenameWithExtension];
     
-    success = [aDictionary writeToFile:tmpFilePath atomically:NO];
+    success = [self writeObject:aDictionary toFile:tmpFilePath];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError classAndMethod:__PRETTY_FUNCTION__]];
@@ -121,7 +121,7 @@
     NSData *data = [NSKeyedArchiver archivedDataWithRootObject:dictionary];
     
     NSError *anyError = nil;
-    BOOL success = [data writeToFile:finalPath options:0 error:&anyError];
+    BOOL success = [self writeData:data toFile:finalPath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];

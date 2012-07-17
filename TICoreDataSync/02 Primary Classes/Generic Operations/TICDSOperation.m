@@ -283,6 +283,53 @@
     return result;
 }
 
+-(BOOL)writeData:(NSData *)data toFile:(NSString *)path error:(NSError **)error
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block BOOL success = NO;
+    __block NSError *anyError = nil;
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        success = [data writeToFile:newURL.path options:0 error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return success;
+}
+
+-(BOOL)writeObject:(id)object toFile:(NSString *)path
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block BOOL success = NO;
+    __block NSError *anyError = nil;
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        success = [object writeToFile:newURL.path atomically:NO];
+    }];
+    return success;
+}
+
+-(NSData *)dataWithContentsOfFile:(NSString *)path error:(NSError **)error
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block NSError *anyError;
+    __block NSData *result = nil;
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        result = [NSData dataWithContentsOfFile:newURL.path options:0 error:&anyError];
+    }];
+    if ( error ) *error = anyError;
+    return result;
+}
+
+-(id)readObjectFromFile:(NSString *)path
+{
+    NSURL *url = [NSURL fileURLWithPath:path];
+    __block NSError *anyError;
+    __block id result = nil;
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:newURL.path];
+        result = [NSPropertyListSerialization propertyListWithStream:stream options:0 format:0 error:&anyError];
+    }];
+    return result;
+}
+
 #pragma mark -
 #pragma mark Properties
 @synthesize shouldUseEncryption = _shouldUseEncryption;

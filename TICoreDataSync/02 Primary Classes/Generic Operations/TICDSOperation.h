@@ -93,6 +93,18 @@
 /** Get item attributes using coordinated read **/
 - (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error;
 
+/** Write data to file in coordinated way **/
+-(BOOL)writeData:(NSData *)data toFile:(NSString *)path error:(NSError **)error;
+
+/** Write object to file in coordinated way **/
+-(BOOL)writeObject:(id)object toFile:(NSString *)path;
+
+/** Read data in coordinated way **/
+-(NSData *)dataWithContentsOfFile:(NSString *)file error:(NSError **)error;
+
+/** Read data in a coordinated way **/
+-(id)readObjectFromFile:(NSString *)path;
+
 /** @name Properties */
 
 /** Used to indicate whether the operation should encrypt files stored on the remote. */

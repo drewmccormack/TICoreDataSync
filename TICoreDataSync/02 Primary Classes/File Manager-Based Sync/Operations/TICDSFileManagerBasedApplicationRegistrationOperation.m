@@ -103,7 +103,7 @@
 - (void)saveSaltDataToRemote:(NSData *)saltData
 {
     NSError *anyError = nil;
-    BOOL success = [saltData writeToFile:[self encryptionDirectorySaltDataFilePath] options:0 error:&anyError];
+    BOOL success = [self writeData:saltData toFile:self.encryptionDirectorySaltDataFilePath error:&anyError];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
@@ -119,7 +119,7 @@
     NSString *tmpFilePath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:TICDSEncryptionTestFilenameWithExtension];
     
     NSError *anyError = nil;
-    BOOL success = [testData writeToFile:tmpFilePath options:0 error:&anyError];
+    BOOL success = [self writeData:testData toFile:tmpFilePath error:&anyError];
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
         [self savedPasswordTestDataWithSuccess:success];
@@ -187,7 +187,7 @@
     
     // if no encryption, just write the file straight to the remote
     if( ![self shouldUseEncryption] ) {
-        success = [aDictionary writeToFile:finalFilePath atomically:NO];
+        success = [self writeObject:aDictionary toFile:finalFilePath];
         
         if( !success ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError classAndMethod:__PRETTY_FUNCTION__]];
@@ -200,7 +200,7 @@
     // if encryption, save to temporary directory first, then encrypt, writing directly to final location
     NSString *tmpFilePath = [[self tempFileDirectoryPath] stringByAppendingPathComponent:TICDSDeviceInfoPlistFilenameWithExtension];
     
-    success = [aDictionary writeToFile:tmpFilePath atomically:NO];
+    success = [self writeObject:aDictionary toFile:tmpFilePath];
     
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError classAndMethod:__PRETTY_FUNCTION__]];
