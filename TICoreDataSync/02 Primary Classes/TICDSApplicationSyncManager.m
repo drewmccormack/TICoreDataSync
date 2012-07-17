@@ -666,10 +666,7 @@
         [self bailFromRemoveAllSyncDataProcessWithError:[TICDSError errorWithCode:TICDSErrorCodeFailedToCreateOperationObject classAndMethod:__PRETTY_FUNCTION__]];
         return NO;
     }
-    
-    [self setOtherTasksQueue:[[[NSOperationQueue alloc] init] autorelease]];
-    [self setRegistrationQueue:[[[NSOperationQueue alloc] init] autorelease]];
-    
+        
     [operation setShouldUseEncryption:[self shouldUseEncryption]];    
     [[self otherTasksQueue] addOperation:operation];
     
