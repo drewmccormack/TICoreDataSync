@@ -659,9 +659,6 @@
     [[self registrationQueue] cancelAllOperations];
     TICDSLog(TICDSLogVerbosityEveryStep, @"Cancelled existing operations");
     
-    [[self otherTasksQueue] setSuspended:NO];
-    [[self registrationQueue] setSuspended:NO];
-    
     TICDSRemoveAllRemoteSyncDataOperation *operation = [self removeAllSyncDataOperation];
     
     if( !operation ) {
