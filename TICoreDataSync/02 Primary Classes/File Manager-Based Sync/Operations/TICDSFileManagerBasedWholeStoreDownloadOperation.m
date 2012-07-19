@@ -64,11 +64,75 @@
     [self determinedMostRecentWholeStoreWasUploadedByClientWithIdentifier:identifierToReturn];
 }
 
+- (void)syncFileURL:(NSURL *)url
+{
+    NSNumber *isUbiquitousNumber;
+    BOOL success = [url getResourceValue:&isUbiquitousNumber forKey:NSURLIsUbiquitousItemKey error:NULL];
+    if ( !success ) return;
+    if ( !isUbiquitousNumber.boolValue ) return;
+    
+    NSError *error;
+    BOOL downloaded = NO, downloading = YES;
+    while ( !downloaded ) {
+        NSNumber *downloadedNumber;
+        BOOL success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
+        if ( !success ) return;        
+        downloaded = downloadedNumber.boolValue;
+        
+        NSNumber *downloadingNumber;
+        success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
+        if ( !success ) return;
+        downloading = downloadingNumber.boolValue;
+        
+        if ( !downloading && !downloaded ) {
+            BOOL success = [self.fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
+            if ( !success ) return;
+        }
+        
+        [NSThread sleepForTimeInterval:0.1];
+    }
+}
+
+- (void)syncDirectoryURL:(NSURL *)url
+{
+    NSString *path = url.path;
+    
+    NSNumber *isUbiquitousNumber;
+    BOOL success = [url getResourceValue:&isUbiquitousNumber forKey:NSURLIsUbiquitousItemKey error:NULL];
+    if ( !success ) return;
+    if ( !isUbiquitousNumber.boolValue ) return;
+
+    [self syncFileURL:url];
+    NSArray *subPaths = [self.fileManager contentsOfDirectoryAtPath:url.path error:NULL];
+    for ( NSString *subPath in subPaths ) {
+        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+        NSString *fullPath = [path stringByAppendingPathComponent:subPath];
+        NSURL *subURL = [NSURL fileURLWithPath:fullPath];
+        NSDictionary *attributes = [self.fileManager attributesOfItemAtPath:fullPath error:NULL];
+        NSString *fileType = [attributes objectForKey:NSFileType];
+        [self syncFileURL:subURL];
+        if ( [fileType isEqualToString:NSFileTypeDirectory] ) {
+            [self syncDirectoryURL:subURL];
+        }
+        [pool drain];
+    }
+}
+
 - (void)downloadWholeStoreFile
 {
     NSError *anyError = nil;
     BOOL success = YES;
     NSString *wholeStorePath = [self pathToWholeStoreFileForClientWithIdentifier:[self requestedWholeStoreClientIdentifier]];
+    NSURL *storeURL = [NSURL fileURLWithPath:wholeStorePath];
+    
+    // Make sure the store and related files are downloaded when using iCloud
+    BOOL isDir;
+    if ( [self.fileManager fileExistsAtPath:wholeStorePath isDirectory:&isDir] ) {
+        if ( isDir )
+            [self syncDirectoryURL:storeURL];
+        else
+            [self syncFileURL:storeURL];
+    }
     
     if( ![self shouldUseEncryption] ) {
         // just copy the file straight across
