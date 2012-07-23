@@ -420,7 +420,7 @@
     
     NSInteger changeSetCount = 1;
     for( TICDSSyncChangeSet *eachChangeSet in syncChangeSets ) {
-        self.changeSetProgressString = [NSString stringWithFormat:@"Change set %ld of %ld", changeSetCount++, [syncChangeSets count]];
+        self.changeSetProgressString = [NSString stringWithFormat:@"Change set %ld of %ld", (long)changeSetCount++, (long)[syncChangeSets count]];
         shouldContinue = [self beginApplyingSyncChangesInChangeSet:eachChangeSet];
         if( !shouldContinue ) {
             break;
