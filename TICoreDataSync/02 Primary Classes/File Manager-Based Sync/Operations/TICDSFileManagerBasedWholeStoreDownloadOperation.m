@@ -73,23 +73,18 @@
     
     NSError *error;
     BOOL downloaded = NO, downloading = YES;
-    while ( !downloaded ) {
-        NSNumber *downloadedNumber;
-        BOOL success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
-        if ( !success ) return;        
-        downloaded = downloadedNumber.boolValue;
-        
-        NSNumber *downloadingNumber;
-        success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
-        if ( !success ) return;
-        downloading = downloadingNumber.boolValue;
-        
-        if ( !downloading && !downloaded ) {
-            BOOL success = [self.fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
-            if ( !success ) return;
-        }
-        
-        [NSThread sleepForTimeInterval:0.1];
+    NSNumber *downloadedNumber;
+    success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
+    if ( !success ) return;        
+    downloaded = downloadedNumber.boolValue;
+    
+    NSNumber *downloadingNumber;
+    success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
+    if ( !success ) return;
+    downloading = downloadingNumber.boolValue;
+    
+    if ( !downloading && !downloaded ) {
+        [self.fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
     }
 }
 
