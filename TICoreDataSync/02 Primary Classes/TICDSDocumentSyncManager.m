@@ -1454,9 +1454,14 @@
     return [[self relativePathToThisDocumentTemporaryFilesDirectory] stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
 }
 
+- (NSString *)clientDirectoryName
+{
+    return [[self clientIdentifier] stringByAppendingPathExtension:@"weakpkg"];
+}
+
 - (NSString *)relativePathToThisDocumentTemporaryWholeStoreThisClientDirectory
 {
-    return [[self relativePathToThisDocumentTemporaryWholeStoreDirectory] stringByAppendingPathComponent:[self clientIdentifier]];
+    return [[self relativePathToThisDocumentTemporaryWholeStoreDirectory] stringByAppendingPathComponent:[self clientDirectoryName]];
 }
 
 - (NSString *)relativePathToThisDocumentTemporaryWholeStoreThisClientDirectoryWholeStoreFile
@@ -1476,7 +1481,7 @@
 
 - (NSString *)relativePathToThisDocumentWholeStoreThisClientDirectory
 {
-    return [[self relativePathToThisDocumentWholeStoreDirectory] stringByAppendingPathComponent:[self clientIdentifier]];
+    return [[self relativePathToThisDocumentWholeStoreDirectory] stringByAppendingPathComponent:[self clientDirectoryName]];
 }
 
 - (NSString *)relativePathToThisDocumentWholeStoreThisClientDirectoryWholeStoreFile
