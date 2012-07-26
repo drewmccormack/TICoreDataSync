@@ -10,6 +10,19 @@
 
 @implementation TICDSSyncChange
 
+static NSString *bigDataDirectory = nil;
+
++ (void)initialize
+{
+    if ( bigDataDirectory == nil ) {
+        bigDataDirectory = [[NSTemporaryDirectory() stringByAppendingPathComponent:@"TICDSSyncChangeData"] retain];
+        if ( [[NSFileManager defaultManager] fileExistsAtPath:bigDataDirectory] ) {
+            [[NSFileManager defaultManager] removeItemAtPath:bigDataDirectory error:NULL];
+        }
+        [[NSFileManager defaultManager] createDirectoryAtPath:bigDataDirectory withIntermediateDirectories:NO attributes:nil error:NULL];
+    }
+}
+
 #pragma mark -
 #pragma mark Helper Methods
 + (id)syncChangeOfType:(TICDSSyncChangeType)aType inManagedObjectContext:(NSManagedObjectContext *)aMoc
@@ -39,6 +52,58 @@
 + (NSString *)ti_entityName
 {
     return NSStringFromClass([self class]);
+}
+
+#pragma mark -
+#pragma mark Low Memory
+
+- (NSData *)mappedDataFromData:(NSData *)data withFilename:(NSString *)filename
+{
+    NSString *path = [bigDataDirectory stringByAppendingPathComponent:filename];
+    [data writeToFile:path atomically:NO];
+    id newData = [NSData dataWithContentsOfFile:path options:NSDataReadingMappedAlways error:NULL];
+    return newData ? : data;
+}
+
+- (id)lowMemoryChangedAttributesFromAttributes:(id)changedAttributes
+{
+    id result = changedAttributes;
+    
+    if ( [changedAttributes isKindOfClass:[NSDictionary class]] ) {
+        NSMutableDictionary *lowMemoryDict = [NSMutableDictionary dictionaryWithCapacity:[changedAttributes count]];
+        for ( id key in changedAttributes ) {
+            id object = [changedAttributes valueForKey:key];
+            if ( [object isKindOfClass:[NSData class]] && [object length] > 10000 ) {
+                NSString *uniqueString = [NSString stringWithFormat:@"%@.%@", [self objectSyncID], key];
+                object = [self mappedDataFromData:object withFilename:uniqueString];
+            }
+            [lowMemoryDict setValue:object forKey:key];
+        }
+        result = lowMemoryDict;
+    }
+    else if ( [changedAttributes isKindOfClass:[NSData class]] && [changedAttributes length] > 10000 ) {
+        NSString *uniqueString = [NSString stringWithFormat:@"%@.%@", [self objectSyncID], [self relevantKey]];
+        result = [self mappedDataFromData:changedAttributes withFilename:uniqueString];
+    }
+                                        
+    return result;
+}
+
+- (void)setChangedAttributes:(id)changedAttributes
+{
+    [self willChangeValueForKey:@"changedAttributes"];
+    id lowMemAttributes = [self lowMemoryChangedAttributesFromAttributes:changedAttributes];
+    [self setPrimitiveValue:lowMemAttributes forKey:@"changedAttributes"];
+    [self didChangeValueForKey:@"changedAttributes"];
+}
+
+- (id)changedAttributes
+{
+    [self willAccessValueForKey:@"changedAttributes"];
+    id result = [self primitiveValueForKey:@"changedAttributes"];
+    result = [self lowMemoryChangedAttributesFromAttributes:result];
+    [self didAccessValueForKey:@"changedAttributes"];
+    return result;
 }
 
 @dynamic changeType;

@@ -524,6 +524,8 @@
     NSInteger changeCount = 1;
     // Apply each object's changes in turn
     for( TICDSSyncChange *eachChange in syncChanges ) {
+        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+        
         switch( [[eachChange changeType] unsignedIntegerValue] ) {
             case TICDSSyncChangeTypeObjectInserted:
                 [self applyObjectInsertedSyncChange:eachChange];
@@ -548,7 +550,11 @@
                 break;
         }
         
+        [[eachChange managedObjectContext] refreshObject:eachChange mergeChanges:NO]; // Keep memory low
+        
         [self ti_alertDelegateOnMainThreadWithSelector:@selector(synchronizationOperation:processedChangeNumber:outOfTotalChangeCount:fromClientNamed:) waitUntilDone:NO, [NSNumber numberWithInteger:changeCount++], [NSNumber numberWithInteger:[syncChanges count]], self.changeSetProgressString];
+        
+        [pool drain];
     }
     
     [[self backgroundApplicationContext] processPendingChanges];

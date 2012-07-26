@@ -87,6 +87,7 @@
 + (NSFetchRequest *)ti_fetchRequestWithPredicate:(NSPredicate *)aPredicate inManagedObjectContext:(NSManagedObjectContext *)aContext sortedWithDescriptors:(NSArray *)someDescriptors
 {
     NSFetchRequest *requestToReturn = [[NSFetchRequest alloc] init];
+    [requestToReturn setFetchBatchSize:1];
     [requestToReturn setEntity:[self ti_entityDescriptionInManagedObjectContext:aContext]];
     
     if( aPredicate ) [requestToReturn setPredicate:aPredicate];
