@@ -217,7 +217,7 @@
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     NSURL *toURL = [NSURL fileURLWithPath:toPath];
     __block BOOL success = NO;    
-    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:0 writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
         success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
         [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
     }];
