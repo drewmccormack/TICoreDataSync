@@ -49,11 +49,12 @@
         }
     }
     
-    if( !identifierToReturn && anyError ) {
-        [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
-        [self determinedMostRecentWholeStoreWasUploadedByClientWithIdentifier:nil];
-        return;
-    }
+//  For some reason, this block could crash the app. The anyError seems to be the problem. Removed for now.
+//    if( !identifierToReturn && anyError ) {
+//        [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
+//        [self determinedMostRecentWholeStoreWasUploadedByClientWithIdentifier:nil];
+//        return;
+//    }
     
     if( !identifierToReturn ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeNoPreviouslyUploadedStoreExists classAndMethod:__PRETTY_FUNCTION__]];
@@ -64,53 +65,41 @@
     [self determinedMostRecentWholeStoreWasUploadedByClientWithIdentifier:identifierToReturn];
 }
 
-- (void)syncFileURL:(NSURL *)url
+- (BOOL)syncFileURL:(NSURL *)url timeout:(NSTimeInterval)timeout error:(NSError **)error
 {
     NSNumber *isUbiquitousNumber;
     BOOL success = [url getResourceValue:&isUbiquitousNumber forKey:NSURLIsUbiquitousItemKey error:NULL];
-    if ( !success ) return;
-    if ( !isUbiquitousNumber.boolValue ) return;
+    if ( !success ) return NO;
+    if ( !isUbiquitousNumber.boolValue ) return YES;
     
-    NSError *error;
-    BOOL downloaded = NO, downloading = YES;
-    NSNumber *downloadedNumber;
-    success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
-    if ( !success ) return;        
-    downloaded = downloadedNumber.boolValue;
-    
-    NSNumber *downloadingNumber;
-    success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
-    if ( !success ) return;
-    downloading = downloadingNumber.boolValue;
-    
-    if ( !downloading && !downloaded ) {
-        [self.fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
-    }
-}
-
-- (void)syncDirectoryURL:(NSURL *)url
-{
-    NSString *path = url.path;
-    
-    NSNumber *isUbiquitousNumber;
-    BOOL success = [url getResourceValue:&isUbiquitousNumber forKey:NSURLIsUbiquitousItemKey error:NULL];
-    if ( !success ) return;
-    if ( !isUbiquitousNumber.boolValue ) return;
-
-    [self syncFileURL:url];
-    NSArray *subPaths = [self.fileManager contentsOfDirectoryAtPath:url.path error:NULL];
-    for ( NSString *subPath in subPaths ) {
-        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-        NSString *fullPath = [path stringByAppendingPathComponent:subPath];
-        NSURL *subURL = [NSURL fileURLWithPath:fullPath];
-        NSDictionary *attributes = [self.fileManager attributesOfItemAtPath:fullPath error:NULL];
-        NSString *fileType = [attributes objectForKey:NSFileType];
-        [self syncFileURL:subURL];
-        if ( [fileType isEqualToString:NSFileTypeDirectory] ) {
-            [self syncDirectoryURL:subURL];
+    BOOL downloaded = NO, downloading = NO;
+    NSUInteger attempt = 0;
+    NSUInteger maxAttempts = timeout;
+    while ( !downloaded ) {
+        NSNumber *downloadedNumber;
+        success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:error];
+        if ( !success ) return NO;
+        downloaded = downloadedNumber.boolValue;
+        
+        NSNumber *downloadingNumber;
+        success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:error];
+        if ( !success ) return NO;
+        downloading = downloadingNumber.boolValue;
+        
+        if ( !downloading && !downloaded && attempt == 0 ) {
+            BOOL success = [self.fileManager startDownloadingUbiquitousItemAtURL:url error:error];
+            if ( !success ) return NO;
         }
-        [pool drain];
+        
+        [NSThread sleepForTimeInterval:1.0];
+        
+        if ( ++attempt == maxAttempts ) {
+            if ( error ) *error = [TICDSError errorWithCode:TICDSErrorCodeUnexpectedOrIncompleteFileLocationOrDirectoryStructure classAndMethod:__PRETTY_FUNCTION__];
+            return NO;
+        }
     }
+    
+    return YES;
 }
 
 - (void)downloadWholeStoreFile
@@ -121,12 +110,11 @@
     NSURL *storeURL = [NSURL fileURLWithPath:wholeStorePath];
     
     // Make sure the store and related files are downloaded when using iCloud
-    BOOL isDir;
-    if ( [self.fileManager fileExistsAtPath:wholeStorePath isDirectory:&isDir] ) {
-        if ( isDir )
-            [self syncDirectoryURL:storeURL];
-        else
-            [self syncFileURL:storeURL];
+    success = [self syncFileURL:storeURL timeout:30.0 error:&anyError];
+    if( !success ) {
+        [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
+        [self downloadedWholeStoreFileWithSuccess:success];
+        return;
     }
     
     if( ![self shouldUseEncryption] ) {
