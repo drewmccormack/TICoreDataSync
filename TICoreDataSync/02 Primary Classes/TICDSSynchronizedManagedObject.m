@@ -71,9 +71,11 @@
         id eachValue = [changedValues valueForKey:eachPropertyName];
         
         NSRelationshipDescription *relationship = [[[self entity] relationshipsByName] valueForKey:eachPropertyName];
-        if( relationship ) {
+        NSAttributeDescription *attribute = [[[self entity] attributesByName] valueForKey:eachPropertyName];
+        if ( relationship && !relationship.isTransient ) {
             [self createSyncChangeIfApplicableForRelationship:relationship];
-        } else {
+        }
+        else if ( attribute && !attribute.isTransient ) {
             TICDSSyncChange *syncChange = [self createSyncChangeForChangeType:TICDSSyncChangeTypeAttributeChanged];
             TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", syncChange.objectSyncID, [self class]);
             [syncChange setRelevantKey:eachPropertyName];
