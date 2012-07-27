@@ -1456,7 +1456,7 @@
 
 - (NSString *)clientDirectoryName
 {
-    return [[self clientIdentifier] stringByAppendingPathExtension:@"weakpkg"];
+    return [self clientIdentifier];
 }
 
 - (NSString *)relativePathToThisDocumentTemporaryWholeStoreThisClientDirectory
