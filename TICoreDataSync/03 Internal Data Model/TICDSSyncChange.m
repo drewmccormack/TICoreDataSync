@@ -69,20 +69,8 @@ static NSString *bigDataDirectory = nil;
 {
     id result = changedAttributes;
     
-    if ( [changedAttributes isKindOfClass:[NSDictionary class]] ) {
-        NSMutableDictionary *lowMemoryDict = [NSMutableDictionary dictionaryWithCapacity:[changedAttributes count]];
-        for ( id key in changedAttributes ) {
-            id object = [changedAttributes valueForKey:key];
-            if ( [object isKindOfClass:[NSData class]] && [object length] > 10000 ) {
-                NSString *uniqueString = [NSString stringWithFormat:@"%@.%@", [self objectSyncID], key];
-                object = [self mappedDataFromData:object withFilename:uniqueString];
-            }
-            [lowMemoryDict setValue:object forKey:key];
-        }
-        result = lowMemoryDict;
-    }
-    else if ( [changedAttributes isKindOfClass:[NSData class]] && [changedAttributes length] > 10000 ) {
-        NSString *uniqueString = [NSString stringWithFormat:@"%@.%@", [self objectSyncID], [self relevantKey]];
+    if ( [changedAttributes isKindOfClass:[NSData class]] && [changedAttributes length] > 10000 ) {
+        NSString *uniqueString = [[NSProcessInfo processInfo] globallyUniqueString];
         result = [self mappedDataFromData:changedAttributes withFilename:uniqueString];
     }
                                         
