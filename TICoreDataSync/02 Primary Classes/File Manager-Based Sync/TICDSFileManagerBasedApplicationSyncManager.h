@@ -19,6 +19,7 @@
 @interface TICDSFileManagerBasedApplicationSyncManager : TICDSApplicationSyncManager {
 @private
     NSURL *_applicationContainingDirectoryLocation;
+    NSMetadataQuery *_cloudMetadataQuery;
 }
 
 #pragma mark Dropbox-Related Methods

@@ -8,6 +8,12 @@
 
 #import "TICoreDataSync.h"
 
+@interface TICDSFileManagerBasedApplicationSyncManager ()
+
+@property (nonatomic, retain) NSMetadataQuery *cloudMetadataQuery;
+
+@end
+
 @implementation TICDSFileManagerBasedApplicationSyncManager
 
 #pragma mark -
@@ -114,6 +120,49 @@
     }
     
     return [NSURL fileURLWithPath:dropboxLocation];
+}
+
+#pragma mark -
+#pragma mark Monitoring cloud metadata changes
+
+- (void)configureWithDelegate:(id <TICDSApplicationSyncManagerDelegate>)aDelegate globalAppIdentifier:(NSString *)anAppIdentifier uniqueClientIdentifier:(NSString *)aClientIdentifier description:(NSString *)aClientDescription userInfo:(NSDictionary *)someUserInfo
+{
+    [super configureWithDelegate:aDelegate globalAppIdentifier:anAppIdentifier uniqueClientIdentifier:aClientIdentifier description:aClientDescription userInfo:someUserInfo];
+    
+    NSMetadataQuery *newQuery = [[[NSMetadataQuery alloc] init] autorelease];
+    newQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
+    newQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    self.cloudMetadataQuery = newQuery;
+}
+
+- (void)setCloudMetadataQuery:(NSMetadataQuery *)newQuery
+{
+    if ( newQuery != _cloudMetadataQuery ) {
+        if ( _cloudMetadataQuery ) {
+            [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidUpdateNotification object:_cloudMetadataQuery];
+            [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:_cloudMetadataQuery];
+            [_cloudMetadataQuery stopQuery];
+        }
+        [_cloudMetadataQuery release];
+        _cloudMetadataQuery = [newQuery retain];
+        if ( newQuery ) {
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(cloudFilesDidChange:) name:NSMetadataQueryDidFinishGatheringNotification object:newQuery];
+            [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(cloudFilesDidChange:) name:NSMetadataQueryDidUpdateNotification object:newQuery];
+            if ( ![_cloudMetadataQuery startQuery] ) NSLog(@"Failed to start cloud NSMetadataQuery");
+        }
+    }
+}
+
+- (void)cloudFilesDidChange:(NSNotification *)notif
+{
+    [self.cloudMetadataQuery disableUpdates];
+    NSFileManager *fm = [[[NSFileManager alloc] init] autorelease];
+    NSUInteger count = [self.cloudMetadataQuery resultCount];
+    for ( NSUInteger i = 0; i < count; i++ ) {
+        NSURL *url = [self.cloudMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+        [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
+    }
+    [self.cloudMetadataQuery enableUpdates];
 }
 
 #pragma mark -
@@ -227,12 +276,18 @@
 - (void)dealloc
 {
     [_applicationContainingDirectoryLocation release], _applicationContainingDirectoryLocation = nil;
-
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self];
+    [_cloudMetadataQuery disableUpdates];
+    [_cloudMetadataQuery stopQuery];
+    [_cloudMetadataQuery release], _cloudMetadataQuery = nil;
+    
     [super dealloc];
 }
 
 #pragma mark -
 #pragma mark Properties
 @synthesize applicationContainingDirectoryLocation = _applicationContainingDirectoryLocation;
+@synthesize cloudMetadataQuery = _cloudMetadataQuery;
 
 @end
