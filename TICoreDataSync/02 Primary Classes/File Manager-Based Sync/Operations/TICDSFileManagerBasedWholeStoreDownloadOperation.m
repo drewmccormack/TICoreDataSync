@@ -102,6 +102,36 @@
     return YES;
 }
 
+- (BOOL)syncDirectoryURL:(NSURL *)url error:(NSError **)error
+{
+    NSString *path = url.path;
+    NSNumber *isUbiquitousNumber;
+    BOOL success = [url getResourceValue:&isUbiquitousNumber forKey:NSURLIsUbiquitousItemKey error:error];
+    if ( !success ) return NO;
+    if ( !isUbiquitousNumber.boolValue ) return YES;
+
+    NSArray *subPaths = [self.fileManager contentsOfDirectoryAtPath:url.path error:error];
+    if ( !subPaths ) return NO;
+    
+    for ( NSString *subPath in subPaths ) {        
+        NSString *fullPath = [path stringByAppendingPathComponent:subPath];
+        NSURL *subURL = [NSURL fileURLWithPath:fullPath];
+        NSDictionary *attributes = [self.fileManager attributesOfItemAtPath:fullPath error:error];
+        NSString *fileType = [attributes objectForKey:NSFileType];
+                
+        if ( success && [fileType isEqualToString:NSFileTypeDirectory] ) {
+            success = [self syncDirectoryURL:subURL error:error];
+        }
+        else if ( success ) {
+            success = [self syncFileURL:subURL timeout:30.0 error:error];
+        }
+                
+        if ( !success ) return NO;
+    }
+    
+    return YES;
+}
+
 - (void)downloadWholeStoreFile
 {
     NSError *anyError = nil;
@@ -110,7 +140,14 @@
     NSURL *storeURL = [NSURL fileURLWithPath:wholeStorePath];
     
     // Make sure the store and related files are downloaded when using iCloud
-    success = [self syncFileURL:storeURL timeout:30.0 error:&anyError];
+    NSDictionary *attributes = [self.fileManager attributesOfItemAtPath:storeURL.path error:&anyError];
+    NSString *fileType = [attributes objectForKey:NSFileType];
+    if ( [fileType isEqualToString:NSFileTypeDirectory] ) {
+        success = [self syncDirectoryURL:storeURL error:&anyError];
+    }
+    else {
+        success = [self syncFileURL:storeURL timeout:30.0 error:&anyError];
+    }
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
         [self downloadedWholeStoreFileWithSuccess:success];
