@@ -156,13 +156,23 @@
 - (void)cloudFilesDidChange:(NSNotification *)notif
 {
     [self.cloudMetadataQuery disableUpdates];
-    NSFileManager *fm = [[[NSFileManager alloc] init] autorelease];
-    NSUInteger count = [self.cloudMetadataQuery resultCount];
-    for ( NSUInteger i = 0; i < count; i++ ) {
-        NSURL *url = [self.cloudMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
-        [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
-    }
-    [self.cloudMetadataQuery enableUpdates];
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
+    dispatch_async(queue, ^{
+        NSFileManager *fm = [[[NSFileManager alloc] init] autorelease];
+        NSUInteger count = [self.cloudMetadataQuery resultCount];
+        for ( NSUInteger i = 0; i < count; i++ ) {
+            NSURL *url = [self.cloudMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+            NSNumber *downloaded, *downloading;
+            BOOL success = [url getResourceValue:&downloaded forKey:NSMetadataUbiquitousItemIsDownloadedKey error:NULL];
+            if ( success ) success = [url getResourceValue:&downloading forKey:NSMetadataUbiquitousItemIsDownloadingKey error:NULL];
+            if ( success && !downloaded.boolValue && !downloading.boolValue ) {
+                [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
+            }
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self.cloudMetadataQuery enableUpdates];
+        });
+    });
 }
 
 #pragma mark -
