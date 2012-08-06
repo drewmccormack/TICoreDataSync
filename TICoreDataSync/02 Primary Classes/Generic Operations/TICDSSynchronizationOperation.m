@@ -760,7 +760,7 @@
     
     NSString *entityName = [aSyncChange objectEntityName];
     NSString *ticdsSyncID = aSyncChange.objectSyncID;
-    NSManagedObject *object = nil;
+    TICDSSynchronizedManagedObject *object = nil;
     
     // Check to see if the object already exists before inserting it.
     NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] init];
@@ -782,7 +782,9 @@
     NSArray *changedAttributeKeys = [[aSyncChange changedAttributes] allKeys];
     for (id key in changedAttributeKeys) {
         [object willChangeValueForKey:key];
-        [object setPrimitiveValue:[[aSyncChange changedAttributes] valueForKey:key] forKey:key];
+        id transformedValue = [[aSyncChange changedAttributes] valueForKey:key];
+        transformedValue = [object reverseTransformedValueOfAttribute:key withValue:transformedValue];
+        [object setPrimitiveValue:transformedValue forKey:key];
         [object didChangeValueForKey:key];
     }
     
@@ -796,7 +798,7 @@
 {
     TICDSLog(TICDSLogVerbosityEveryStep, @"Applying Attribute Change sync change");
     
-    NSManagedObject *object = [self backgroundApplicationContextObjectForEntityName:[aSyncChange objectEntityName] syncIdentifier:[aSyncChange objectSyncID]];
+    TICDSSynchronizedManagedObject *object = (id)[self backgroundApplicationContextObjectForEntityName:[aSyncChange objectEntityName] syncIdentifier:[aSyncChange objectSyncID]];
     
     if( !object ) {
         TICDSLog(TICDSLogVerbosityErrorsOnly, @"Object not found locally for attribute change [%@] %@", aSyncChange, [aSyncChange objectEntityName]);
@@ -807,7 +809,9 @@
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", aSyncChange, [aSyncChange objectEntityName]);
 
     [object willChangeValueForKey:[aSyncChange relevantKey]];
-    [object setPrimitiveValue:[aSyncChange changedAttributes] forKey:[aSyncChange relevantKey]];
+    id transformedValue = [aSyncChange changedAttributes];
+    transformedValue = [object reverseTransformedValueOfAttribute:[aSyncChange relevantKey] withValue:transformedValue];
+    [object setPrimitiveValue:transformedValue forKey:[aSyncChange relevantKey]];
     [object didChangeValueForKey:[aSyncChange relevantKey]];
     
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Changed attribute on object: %@", object);

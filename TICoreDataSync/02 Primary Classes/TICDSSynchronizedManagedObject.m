@@ -67,9 +67,7 @@
             TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Not creating a change for %@.%@", [self class], eachPropertyName);
             continue;
         }
-        
-        id eachValue = [changedValues valueForKey:eachPropertyName];
-        
+                
         NSRelationshipDescription *relationship = [[[self entity] relationshipsByName] valueForKey:eachPropertyName];
         NSAttributeDescription *attribute = [[[self entity] attributesByName] valueForKey:eachPropertyName];
         if ( relationship && !relationship.isTransient ) {
@@ -79,6 +77,7 @@
             TICDSSyncChange *syncChange = [self createSyncChangeForChangeType:TICDSSyncChangeTypeAttributeChanged];
             TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", syncChange.objectSyncID, [self class]);
             [syncChange setRelevantKey:eachPropertyName];
+            id eachValue = [self transformedValueOfAttribute:eachPropertyName];
             [syncChange setChangedAttributes:eachValue];
         }
     }
@@ -216,14 +215,36 @@
 }
 
 #pragma mark -
-#pragma mark Dictionaries
+#pragma mark Attributes
+- (id)transformedValueOfAttribute:(NSString *)key
+{
+    NSAttributeDescription *attribute = [self.entity.attributesByName valueForKey:key];
+    NSString *transformerName = [attribute valueTransformerName];
+    NSValueTransformer *valueTransformer = ( transformerName ? [NSValueTransformer valueTransformerForName:transformerName] : nil );
+    id transformedValue = [self valueForKey:key];
+    if ( valueTransformer ) transformedValue = [valueTransformer transformedValue:transformedValue];
+    return transformedValue;
+}
+
+- (id)reverseTransformedValueOfAttribute:(NSString *)key withValue:(id)value
+{
+    NSAttributeDescription *attribute = [self.entity.attributesByName valueForKey:key];
+    NSString *transformerName = [attribute valueTransformerName];
+    NSValueTransformer *valueTransformer = ( transformerName ? [NSValueTransformer valueTransformerForName:transformerName] : nil );
+    if ( valueTransformer ) value = [valueTransformer reverseTransformedValue:value];
+    return value;
+}
+
 - (NSDictionary *)dictionaryOfAllAttributes
 {
     NSDictionary *objectAttributeNames = [[self entity] attributesByName];
     
     NSMutableDictionary *attributeValues = [NSMutableDictionary dictionaryWithCapacity:[objectAttributeNames count]];
     for( NSString *eachAttributeName in [objectAttributeNames allKeys] ) {
-        [attributeValues setValue:[self valueForKey:eachAttributeName] forKey:eachAttributeName];
+        NSAttributeDescription *attribute = [objectAttributeNames valueForKey:eachAttributeName];
+        if ( [attribute isTransient] ) continue;
+        id value = [self transformedValueOfAttribute:eachAttributeName];
+        [attributeValues setValue:value forKey:eachAttributeName];
     }
     
     return attributeValues;

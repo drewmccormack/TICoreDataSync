@@ -28,4 +28,7 @@
 @property (nonatomic, readonly) NSManagedObjectContext *syncChangesMOC;
 @property (nonatomic, readwrite, assign) BOOL excludeFromSync;
 
+- (id)transformedValueOfAttribute:(NSString *)key;
+- (id)reverseTransformedValueOfAttribute:(NSString *)key withValue:(id)value;
+
 @end
