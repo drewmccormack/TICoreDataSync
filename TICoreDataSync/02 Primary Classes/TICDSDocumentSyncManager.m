@@ -1346,6 +1346,10 @@
 {
     [[NSNotificationCenter defaultCenter] removeObserver:self];
     
+    [_synchronizationQueue cancelAllOperations];
+    [_registrationQueue cancelAllOperations];
+    [_otherTasksQueue cancelAllOperations];
+    
     [_applicationSyncManager release], _applicationSyncManager = nil;
     [_documentIdentifier release], _documentIdentifier = nil;
     [_clientIdentifier release], _clientIdentifier = nil;
