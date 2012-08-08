@@ -165,7 +165,7 @@
     }
     
     // Process in background. Can be expensive
-    dispatch_queue_t queue = dispatch_queue_create("startdownloads", DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_t queue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0);
     dispatch_async(queue, ^{
         NSFileManager *fm = [[NSFileManager alloc] init];
         for ( NSURL *url in urls ) {
@@ -177,11 +177,9 @@
             }
         }
         [fm release];
-        dispatch_async(dispatch_get_main_queue(), ^{
-            [self.cloudMetadataQuery enableUpdates];
-        });
-        dispatch_release(queue);
     });
+    
+    [self.cloudMetadataQuery enableUpdates];
 }
 
 #pragma mark -

@@ -48,12 +48,6 @@
     [self operationDidFailToComplete];
 }
 
-- (void)cancel
-{
-    [super cancel];
-    self.delegate = nil;
-}
-
 #pragma mark -
 #pragma mark Operation Settings
 - (BOOL)isConcurrent
@@ -167,8 +161,6 @@
 
 - (void)dealloc
 {
-    _delegate = nil;
-    
     [_cryptor release], _cryptor = nil;
     [_userInfo release], _userInfo = nil;
     [_error release], _error = nil;

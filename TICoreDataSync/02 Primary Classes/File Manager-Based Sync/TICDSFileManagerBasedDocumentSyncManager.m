@@ -80,7 +80,7 @@
 }
 
 - (void)directoryContentsDidChange:(NSNotification *)aNotification
-{    
+{
     NSString *aPath = [[aNotification userInfo] valueForKey:kTIKQExpandedDirectory];
     
     if( ![[aPath lastPathComponent] isEqualToString:TICDSSyncChangesDirectoryName] ) {
