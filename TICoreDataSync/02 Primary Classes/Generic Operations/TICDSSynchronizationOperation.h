@@ -80,6 +80,8 @@
     NSString *_integrityKey;
 	NSString *_changeSetProgressString;
 	NSNumberFormatter *_uuidPrefixFormatter;
+    
+    NSMutableDictionary *_applicationObjectsBySyncIDByEntity;
 }
 
 #pragma mark Designated Initializer

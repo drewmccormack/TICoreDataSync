@@ -61,6 +61,8 @@
 
 - (void)main
 {
+    _applicationObjectsBySyncIDByEntity = [[NSMutableDictionary alloc] init];
+    
     [self beginCheckWhetherRemoteIntegrityKeyMatchesLocalKey];
 }
 
@@ -593,14 +595,23 @@
     
     NSMutableArray *syncChangesToReturn = [NSMutableArray arrayWithCapacity:[syncChanges count]];
     
-    NSArray *syncChangesForEachObject = nil;
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    NSMutableDictionary *syncChangesByObjectSyncID = [[[NSMutableDictionary alloc] initWithCapacity:syncChanges.count] autorelease];
+    for ( TICDSSyncChange *change in syncChanges ) {
+        id key = change.objectSyncID ? : [NSNull null];
+        NSMutableArray *changesForID = [syncChangesByObjectSyncID objectForKey:key] ? : [[[NSMutableArray alloc] initWithCapacity:1] autorelease];
+        [changesForID addObject:change];
+        [syncChangesByObjectSyncID setObject:changesForID forKey:key];
+    }
+    
     for( NSString *eachIdentifier in identifiersOfAffectedObjects ) {
-        syncChangesForEachObject = [syncChanges filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"objectSyncID == %@", eachIdentifier]];
+        NSArray *syncChangesForEachObject = [syncChangesByObjectSyncID objectForKey:eachIdentifier];
         
         syncChangesForEachObject = [self remoteSyncChangesForObjectWithIdentifier:eachIdentifier afterCheckingForConflictsInRemoteSyncChanges:syncChangesForEachObject];
         [syncChangesToReturn addObjectsFromArray:syncChangesForEachObject];
     }
-    
+    [pool drain];
+        
     return syncChangesToReturn;
 }
 
@@ -738,19 +749,24 @@
 #pragma mark Fetching Affected Objects
 - (NSManagedObject *)backgroundApplicationContextObjectForEntityName:(NSString *)entityName syncIdentifier:(NSString *)aSyncIdentifier
 {
-    NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] init];
-    [fetchRequest setEntity:[NSEntityDescription entityForName:entityName inManagedObjectContext:[self backgroundApplicationContext]]];
-    [fetchRequest setPredicate:[NSPredicate predicateWithFormat:@"%K == %@", TICDSSyncIDAttributeName, aSyncIdentifier]];
-    
-    NSError *anyError = nil;
-    NSArray *results = [[self backgroundApplicationContext] executeFetchRequest:fetchRequest error:&anyError];
-    if( !results ) {
-        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Error fetching affected object: %@", anyError);
+    NSDictionary *objectsBySyncID = [_applicationObjectsBySyncIDByEntity objectForKey:entityName];
+    if ( !objectsBySyncID ) {
+        NSError *anyError = nil;
+        NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] init];
+        [fetchRequest setEntity:[NSEntityDescription entityForName:entityName inManagedObjectContext:[self backgroundApplicationContext]]];
+        [fetchRequest setPropertiesToFetch:[NSArray arrayWithObject:TICDSSyncIDAttributeName]];
+        NSArray *objects = [[self backgroundApplicationContext] executeFetchRequest:fetchRequest error:&anyError];
+        if( !objects ) {
+            TICDSLog(TICDSLogVerbosityErrorsOnly, @"Error fetching objects: %@", anyError);
+        }
+        else {
+            objectsBySyncID = [NSMutableDictionary dictionaryWithObjects:objects forKeys:[objects valueForKeyPath:TICDSSyncIDAttributeName]];
+            [_applicationObjectsBySyncIDByEntity setObject:objectsBySyncID forKey:entityName];
+        }
+        [fetchRequest release];
     }
     
-    [fetchRequest release];
-    
-    return [results lastObject];
+    return [objectsBySyncID objectForKey:aSyncIdentifier];
 }
 
 #pragma mark Applying Changes
@@ -760,20 +776,16 @@
     
     NSString *entityName = [aSyncChange objectEntityName];
     NSString *ticdsSyncID = aSyncChange.objectSyncID;
-    TICDSSynchronizedManagedObject *object = nil;
+    TICDSSynchronizedManagedObject *object = (id)[self backgroundApplicationContextObjectForEntityName:entityName syncIdentifier:ticdsSyncID];
     
-    // Check to see if the object already exists before inserting it.
-    NSFetchRequest *fetchRequest = [[NSFetchRequest alloc] init];
-    [fetchRequest setEntity:[NSEntityDescription entityForName:entityName inManagedObjectContext:[self backgroundApplicationContext]]];
-    [fetchRequest setPredicate:[NSPredicate predicateWithFormat:@"%K == %@", TICDSSyncIDAttributeName, ticdsSyncID]];
-    
-    NSError *anyError = nil;
-    NSArray *results = [[self backgroundApplicationContext] executeFetchRequest:fetchRequest error:&anyError];
-    if ([results count] == 0) {
+    if ( !object ) {
         object = [NSEntityDescription insertNewObjectForEntityForName:entityName inManagedObjectContext:[self backgroundApplicationContext]];
         TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Inserted object: %@", object);
+        
+        // Add to object cache
+        NSMutableDictionary *objectsBySyncID = [_applicationObjectsBySyncIDByEntity objectForKey:entityName];
+        [objectsBySyncID setObject:object forKey:ticdsSyncID];
     } else {
-        object = [results lastObject];
         TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Attempted to insert an object that already existed, updating existing object instead.: %@", object);
     }
     
@@ -789,9 +801,6 @@
     }
     
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Updated object: %@", object);
-
-    [fetchRequest release];
-    
 }
 
 - (void)applyAttributeChangeSyncChange:(TICDSSyncChange *)aSyncChange
@@ -885,6 +894,10 @@
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", aSyncChange, [aSyncChange objectEntityName]);
 
     [[self backgroundApplicationContext] deleteObject:object];
+    
+    // Remove from object cache
+    NSMutableDictionary *objectsBySyncID = [_applicationObjectsBySyncIDByEntity objectForKey:[aSyncChange objectEntityName]];
+    [objectsBySyncID removeObjectForKey:[aSyncChange objectSyncID] ? : [NSNull null]];
 }
 
 #pragma mark - UPLOAD OF LOCAL SYNC COMMANDS
@@ -1084,6 +1097,8 @@
     [_localSyncChangesToMergeContext release], _localSyncChangesToMergeContext = nil;
     [_primaryPersistentStoreCoordinator release], _primaryPersistentStoreCoordinator = nil;
     [_backgroundApplicationContext release], _backgroundApplicationContext = nil;
+    
+    [_applicationObjectsBySyncIDByEntity release], _applicationObjectsBySyncIDByEntity = nil;
     
     [super dealloc];
 }
