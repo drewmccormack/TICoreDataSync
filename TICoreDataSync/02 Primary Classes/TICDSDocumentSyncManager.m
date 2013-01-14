@@ -862,7 +862,7 @@
 
 - (void)continueSynchronizationByResolvingConflictWithResolutionType:(TICDSSyncConflictResolutionType)aType
 {
-    TICDSSynchronizationOperation *operation = [[[self synchronizationQueue] operations] lastObject];
+    TICDSSynchronizationOperation *operation = [[[self synchronizationQueue] operations] objectAtIndex:0];
     
     [operation setMostRecentConflictResolutionType:aType];
     
