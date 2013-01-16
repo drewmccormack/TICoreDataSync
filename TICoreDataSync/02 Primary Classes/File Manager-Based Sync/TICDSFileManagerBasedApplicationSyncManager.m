@@ -128,11 +128,7 @@
 - (void)configureWithDelegate:(id <TICDSApplicationSyncManagerDelegate>)aDelegate globalAppIdentifier:(NSString *)anAppIdentifier uniqueClientIdentifier:(NSString *)aClientIdentifier description:(NSString *)aClientDescription userInfo:(NSDictionary *)someUserInfo
 {
     [super configureWithDelegate:aDelegate globalAppIdentifier:anAppIdentifier uniqueClientIdentifier:aClientIdentifier description:aClientDescription userInfo:someUserInfo];
-    
-    NSMetadataQuery *newQuery = [[[NSMetadataQuery alloc] init] autorelease];
-    newQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
-    newQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
-    self.cloudMetadataQuery = newQuery;
+    [self refreshCloudMetadataQuery];
 }
 
 - (void)setCloudMetadataQuery:(NSMetadataQuery *)newQuery
@@ -151,6 +147,14 @@
             if ( ![_cloudMetadataQuery startQuery] ) NSLog(@"Failed to start cloud NSMetadataQuery");
         }
     }
+}
+
+- (void)refreshCloudMetadataQuery
+{
+    NSMetadataQuery *newQuery = [[[NSMetadataQuery alloc] init] autorelease];
+    newQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
+    newQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    self.cloudMetadataQuery = newQuery;
 }
 
 - (void)cloudFilesDidChange:(NSNotification *)notif

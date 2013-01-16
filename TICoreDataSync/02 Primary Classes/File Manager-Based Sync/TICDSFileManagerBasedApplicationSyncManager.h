@@ -22,6 +22,11 @@
     NSMetadataQuery *_cloudMetadataQuery;
 }
 
+#pragma mark iCloud-Related Methods
+
+/** Start a new metadata query to asynchronously download cloud files not yet local. */
+- (void)refreshCloudMetadataQuery;
+
 #pragma mark Dropbox-Related Methods
 /** @name Dropbox-Related Methods */
 
