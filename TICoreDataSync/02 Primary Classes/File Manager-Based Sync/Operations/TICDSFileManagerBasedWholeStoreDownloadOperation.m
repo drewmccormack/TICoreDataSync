@@ -75,18 +75,19 @@
     BOOL downloaded = NO, downloading = NO;
     NSUInteger attempt = 0;
     NSUInteger maxAttempts = timeout;
-    while ( !downloaded ) {
+    do {
         NSNumber *downloadedNumber;
         success = [url getResourceValue:&downloadedNumber forKey:NSURLUbiquitousItemIsDownloadedKey error:error];
         if ( !success ) return NO;
         downloaded = downloadedNumber.boolValue;
+        if ( downloaded ) break;
         
         NSNumber *downloadingNumber;
         success = [url getResourceValue:&downloadingNumber forKey:NSURLUbiquitousItemIsDownloadingKey error:error];
         if ( !success ) return NO;
         downloading = downloadingNumber.boolValue;
         
-        if ( !downloading && !downloaded && attempt == 0 ) {
+        if ( !downloading && attempt == 0 ) {
             BOOL success = [self.fileManager startDownloadingUbiquitousItemAtURL:url error:error];
             if ( !success ) return NO;
         }
@@ -97,7 +98,7 @@
             if ( error ) *error = [TICDSError errorWithCode:TICDSErrorCodeUnexpectedOrIncompleteFileLocationOrDirectoryStructure classAndMethod:__PRETTY_FUNCTION__];
             return NO;
         }
-    }
+    } while ( !downloaded );
     
     return YES;
 }
@@ -123,7 +124,7 @@
             success = [self syncDirectoryURL:subURL error:error];
         }
         else if ( success ) {
-            success = [self syncFileURL:subURL timeout:30.0 error:error];
+            success = [self syncFileURL:subURL timeout:300.0 error:error];
         }
                 
         if ( !success ) return NO;
@@ -146,7 +147,7 @@
         success = [self syncDirectoryURL:storeURL error:&anyError];
     }
     else {
-        success = [self syncFileURL:storeURL timeout:30.0 error:&anyError];
+        success = [self syncFileURL:storeURL timeout:300.0 error:&anyError];
     }
     if( !success ) {
         [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
