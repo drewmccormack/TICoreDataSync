@@ -8,6 +8,9 @@
 
 #import "TICDSApplicationSyncManager.h"
 
+/** Notification that fires when the cloud transfer progress properties have been refreshed. */
+extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotification;
+
 /** The `TICDSFileManagerBasedApplicationSyncManager` describes a class used to synchronize an application with a remote service that can be accessed via an `NSFileManager`. This includes:
  
  1. Dropbox on the desktop (files are typically accessed via `~/Dropbox`)
@@ -20,12 +23,18 @@
 @private
     NSURL *_applicationContainingDirectoryLocation;
     NSMetadataQuery *_cloudMetadataQuery;
+    NSMetadataQuery *_transferProgressMetadataQuery;
 }
+
+@property (readonly) unsigned long long cloudBytesToUpload, cloudBytesToDownload;
 
 #pragma mark iCloud-Related Methods
 
 /** Start a new metadata query to asynchronously download cloud files not yet local. */
 - (void)refreshCloudMetadataQuery;
+
+/** Start a metadata query to scan cloud files, and determine how much data still needs to be uploaded and downloaded */
+- (void)refreshCloudTransferProgress;
 
 #pragma mark Dropbox-Related Methods
 /** @name Dropbox-Related Methods */

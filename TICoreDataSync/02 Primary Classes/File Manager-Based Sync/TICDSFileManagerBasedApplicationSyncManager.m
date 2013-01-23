@@ -8,9 +8,12 @@
 
 #import "TICoreDataSync.h"
 
+NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotification = @"TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotification";
+
 @interface TICDSFileManagerBasedApplicationSyncManager ()
 
 @property (nonatomic, retain) NSMetadataQuery *cloudMetadataQuery;
+@property (readwrite) unsigned long long cloudBytesToUpload, cloudBytesToDownload;
 
 @end
 
@@ -188,6 +191,54 @@
     });
 }
 
+- (void)refreshCloudTransferProgress
+{
+    if ( _transferProgressMetadataQuery ) return;
+    _transferProgressMetadataQuery = [[NSMetadataQuery alloc] init];
+    _transferProgressMetadataQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
+    _transferProgressMetadataQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(finishedGatheringCloudTransferProgress:) name:NSMetadataQueryDidFinishGatheringNotification object:_transferProgressMetadataQuery];
+    [_transferProgressMetadataQuery startQuery];
+}
+
+- (void)finishedGatheringCloudTransferProgress:(NSNotification *)notif
+{
+    [_transferProgressMetadataQuery disableUpdates];
+    
+    NSUInteger count = [_transferProgressMetadataQuery resultCount];
+    NSMutableArray *urls = [NSMutableArray arrayWithCapacity:count];
+    for ( NSUInteger i = 0; i < count; i++ ) {
+        NSURL *url = [_transferProgressMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+        [urls addObject:url];
+    }
+        
+    dispatch_queue_t queue = dispatch_queue_create("sumtransfer", DISPATCH_QUEUE_SERIAL);
+    dispatch_async(queue, ^{
+        unsigned long long toDownload = 0, toUpload = 0;
+        for ( NSURL *url in urls ) {
+            NSNumber *fileSizeNumber = nil;
+            NSNumber *percentDownloaded = nil, *percentUploaded = nil;
+            [url getResourceValue:&fileSizeNumber forKey:NSMetadataItemFSSizeKey error:NULL];
+            [url getResourceValue:&percentDownloaded forKey:NSMetadataUbiquitousItemPercentDownloadedKey error:NULL];
+            [url getResourceValue:&percentUploaded forKey:NSMetadataUbiquitousItemPercentUploadedKey error:NULL];
+
+            unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
+            if ( percentDownloaded && fileSizeNumber ) toDownload += percentDownloaded.doubleValue / 100.0 * fileSize;
+            if ( percentUploaded && fileSizeNumber ) toUpload += percentUploaded.doubleValue / 100.0 * fileSize;            
+        }
+        dispatch_async(dispatch_get_main_queue(), ^{
+            self.cloudBytesToDownload = toDownload;
+            self.cloudBytesToUpload = toUpload;
+            [[NSNotificationCenter defaultCenter] postNotificationName:TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotification object:self];
+        });
+        dispatch_release(queue);
+    });
+    
+    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:_transferProgressMetadataQuery];
+    [_transferProgressMetadataQuery stopQuery];
+    [_transferProgressMetadataQuery release], _transferProgressMetadataQuery = nil;
+}
+
 #pragma mark -
 #pragma mark Overridden Methods
 
@@ -304,6 +355,8 @@
     [_cloudMetadataQuery disableUpdates];
     [_cloudMetadataQuery stopQuery];
     [_cloudMetadataQuery release], _cloudMetadataQuery = nil;
+    [_transferProgressMetadataQuery stopQuery];
+    [_transferProgressMetadataQuery release], _transferProgressMetadataQuery = nil;
     
     [super dealloc];
 }
