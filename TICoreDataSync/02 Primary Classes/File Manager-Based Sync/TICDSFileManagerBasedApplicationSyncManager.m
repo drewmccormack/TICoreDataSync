@@ -176,9 +176,10 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     dispatch_async(queue, ^{
         NSFileManager *fm = [[NSFileManager alloc] init];
         for ( NSURL *url in urls ) {
-            NSNumber *downloaded, *downloading;
-            BOOL success = [url getResourceValue:&downloaded forKey:NSMetadataUbiquitousItemIsDownloadedKey error:NULL];
-            if ( success ) success = [url getResourceValue:&downloading forKey:NSMetadataUbiquitousItemIsDownloadingKey error:NULL];
+            NSNumber *downloaded = nil, *downloading = nil;
+            NSError *error = nil;
+            BOOL success = [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
+            if ( success ) success = [url getResourceValue:&downloading forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
             if ( success && !downloaded.boolValue && !downloading.boolValue ) {
                 [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
             }
