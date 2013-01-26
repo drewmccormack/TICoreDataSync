@@ -176,6 +176,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     dispatch_async(queue, ^{
         NSFileManager *fm = [[NSFileManager alloc] init];
         for ( NSURL *url in urls ) {
+            // Download files that are not yet downloaded
             NSNumber *downloaded = nil, *downloading = nil;
             NSError *error = nil;
             BOOL success = [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
@@ -183,7 +184,53 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
             if ( success && !downloaded.boolValue && !downloading.boolValue ) {
                 [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
             }
+            
+            // Check for files that should be uploaded, but have gotten 'stuck'.
+            NSNumber *uploaded = nil, *uploading = nil;
+            [url getResourceValue:&uploaded forKey:NSURLUbiquitousItemIsUploadedKey error:NULL];
+            [url getResourceValue:&uploading forKey:NSURLUbiquitousItemIsUploadingKey error:NULL];
+            if ( (uploaded && !uploaded.boolValue) && (uploading && !uploading.boolValue) ) {
+                if ( !_unfinishedUploadDatesByURL ) _unfinishedUploadDatesByURL = [[NSMutableDictionary alloc] init];
+                
+                NSDate *firstUploadFailureDate = [_unfinishedUploadDatesByURL objectForKey:url];
+                if ( !firstUploadFailureDate ) {
+                    [_unfinishedUploadDatesByURL setObject:[NSDate date] forKey:url];
+                }
+                else if ( [firstUploadFailureDate timeIntervalSinceNow] < -30*60 ) {
+                    // After 30 minutes, try to jolt file back into action by removing from iCloud, and putting back in.
+                    [_unfinishedUploadDatesByURL removeObjectForKey:url];
+                    
+                    NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"MovedAsideCloudFiles"];
+                    [fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL];
+                     
+                    NSString *tempFilePath = [tempDirPath stringByAppendingPathComponent:url.lastPathComponent];
+                    NSURL *tempURL = [NSURL fileURLWithPath:tempFilePath];
+                    
+                    __block NSError *anyError = nil;
+                    __block BOOL success = NO;
+                    NSFileCoordinator *fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+                    
+                    [fileCoordinator coordinateReadingItemAtURL:url options:0 writingItemAtURL:tempURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+                        [fm removeItemAtURL:newWritingURL error:NULL];
+                        success = [fm copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
+                        if ( !success ) NSLog(@"%@", anyError);
+                    }];
+                    
+                    [fileCoordinator coordinateWritingItemAtURL:tempURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+                        [fm removeItemAtURL:newToURL error:NULL];
+                        success = [fm moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
+                        [fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
+                        if ( !success ) NSLog(@"%@", anyError);
+                    }];
+                    
+                    [fileCoordinator release];
+                }
+            }
+            else {
+                [_unfinishedUploadDatesByURL removeObjectForKey:url];
+            }
         }
+
         [fm release];
         dispatch_async(dispatch_get_main_queue(), ^{
             [self.cloudMetadataQuery enableUpdates];
@@ -348,6 +395,16 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
 
 #pragma mark -
 #pragma mark Initialization and Deallocation
+
+- (id) init
+{
+    self = [super init];
+    if ( self ) {
+        _unfinishedUploadDatesByURL = nil;
+    }
+    return self;
+}
+
 - (void)dealloc
 {
     [_applicationContainingDirectoryLocation release], _applicationContainingDirectoryLocation = nil;
@@ -358,6 +415,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [_cloudMetadataQuery release], _cloudMetadataQuery = nil;
     [_transferProgressMetadataQuery stopQuery];
     [_transferProgressMetadataQuery release], _transferProgressMetadataQuery = nil;
+    [_unfinishedUploadDatesByURL release], _unfinishedUploadDatesByURL = nil;
     
     [super dealloc];
 }
