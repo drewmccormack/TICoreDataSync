@@ -160,6 +160,114 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     self.cloudMetadataQuery = newQuery;
 }
 
+- (NSString *)unfinishedUploadsDataFile
+{
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES);
+    NSString *directory = paths.lastObject;
+    directory = [directory stringByAppendingPathComponent:[[[NSBundle mainBundle] infoDictionary] objectForKey:(NSString *)kCFBundleNameKey]];
+    return [directory stringByAppendingPathComponent:@"UnfinishedCloudUploads.plist"];
+}
+
+- (void)initiateDownloadsForURLs:(NSArray *)urls
+{
+    NSFileManager *fm = [[NSFileManager alloc] init];
+    for ( NSURL *url in urls ) {
+        // Download files that are not yet downloaded
+        NSNumber *downloaded = nil, *downloading = nil;
+        NSError *error = nil;
+        BOOL success = [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
+        if ( success ) success = [url getResourceValue:&downloading forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
+        if ( success && !downloaded.boolValue && !downloading.boolValue ) {
+            [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
+        }
+    }
+    [fm release];
+}
+
+- (void)checkFileUploadsForURLs:(NSArray *)urls
+{
+    NSFileManager *fm = [[NSFileManager alloc] init];
+
+    // Load unfinished upload dates
+    NSString *uploadsFile = [self unfinishedUploadsDataFile];
+    if ( !_unfinishedUploadDatesByURL ) {
+        _unfinishedUploadDatesByURL = [[NSMutableDictionary alloc] initWithContentsOfFile:uploadsFile];
+        if ( !_unfinishedUploadDatesByURL ) _unfinishedUploadDatesByURL = [[NSMutableDictionary alloc] init];
+    }
+    
+    // Create temporary directory for moved aside files
+    NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"MovedAsideCloudFiles"];
+    [fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL];
+    
+    // Check for files that should be uploaded, but have gotten 'stuck'.
+    const NSTimeInterval ReuploadTimeInterval = 30*60; // 30 minutes
+    for ( NSURL *url in urls ) {
+        @autoreleasepool {
+            NSDictionary *fileAttributes = [fm attributesOfItemAtPath:url.path error:NULL];
+            if ( [fileAttributes[NSFileType] isEqualToString:NSFileTypeDirectory] ) continue; // Ignore directories
+            
+            // Check if file is uploading or uploaded. If not, check how long it has been 'dormant'.
+            // If it is taking too long, try to jolt by removing it from iCloud, and putting it back in.
+            NSNumber *uploaded = nil, *uploading = nil;
+            [url getResourceValue:&uploaded forKey:NSURLUbiquitousItemIsUploadedKey error:NULL];
+            [url getResourceValue:&uploading forKey:NSURLUbiquitousItemIsUploadingKey error:NULL];
+            if ( (uploaded && !uploaded.boolValue) && (uploading && !uploading.boolValue) ) {
+                NSDate *firstUploadFailureDate = [_unfinishedUploadDatesByURL objectForKey:url];
+                if ( !firstUploadFailureDate ) {
+                    // New file
+                    [_unfinishedUploadDatesByURL setObject:[NSDate date] forKey:url];
+                }
+                else if ( [firstUploadFailureDate timeIntervalSinceNow] < -ReuploadTimeInterval ) {
+                    // Overdue file. Try to jolt.
+                    [_unfinishedUploadDatesByURL removeObjectForKey:url];
+                    
+                    NSString *tempFilePath = [tempDirPath stringByAppendingPathComponent:url.lastPathComponent];
+                    NSURL *tempURL = [NSURL fileURLWithPath:tempFilePath];
+                    
+                    __block NSError *anyError = nil;
+                    __block BOOL success = NO;
+                    NSFileCoordinator *fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
+                    
+                    [fileCoordinator coordinateReadingItemAtURL:url options:0 writingItemAtURL:tempURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+                        [fm removeItemAtURL:newWritingURL error:NULL];
+                        success = [fm copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
+                        if ( !success ) NSLog(@"%@", anyError);
+                    }];
+                    
+                    if ( success ) [fileCoordinator coordinateWritingItemAtURL:tempURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+                        [fm removeItemAtURL:newToURL error:NULL];
+                        success = [fm moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
+                        [fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
+                        if ( !success ) NSLog(@"%@", anyError);
+                    }];
+                    
+                    [fileCoordinator release];
+                }
+            }
+            else {
+                // File is uploaded or irrelevant
+                [_unfinishedUploadDatesByURL removeObjectForKey:url];
+            }
+        }
+    }
+    
+    // Remove very old entries that are no longer relevant.
+    const NSTimeInterval UploadEntryExpiryTimeInterval = 7*24*60*60; // 7 days
+    urls = [NSArray arrayWithArray:_unfinishedUploadDatesByURL.allKeys];
+    for ( id url in urls ) {
+        NSDate *date = [_unfinishedUploadDatesByURL objectForKey:url];
+        if ( [date timeIntervalSinceNow] < -UploadEntryExpiryTimeInterval ) {
+            [_unfinishedUploadDatesByURL removeObjectForKey:url];
+        }
+    }
+    
+    // Save unfinished uploads.
+    [fm createDirectoryAtPath:[uploadsFile stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:NULL];
+    [_unfinishedUploadDatesByURL writeToFile:uploadsFile atomically:YES];
+    
+    [fm release];
+}
+
 - (void)cloudFilesDidChange:(NSNotification *)notif
 {
     [self.cloudMetadataQuery disableUpdates];
@@ -174,67 +282,13 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     // Process in background. Can be expensive
     dispatch_queue_t queue = dispatch_queue_create("startdownloads", DISPATCH_QUEUE_SERIAL);
     dispatch_async(queue, ^{
-        NSFileManager *fm = [[NSFileManager alloc] init];
-        for ( NSURL *url in urls ) {
-            // Download files that are not yet downloaded
-            NSNumber *downloaded = nil, *downloading = nil;
-            NSError *error = nil;
-            BOOL success = [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:&error];
-            if ( success ) success = [url getResourceValue:&downloading forKey:NSURLUbiquitousItemIsDownloadingKey error:&error];
-            if ( success && !downloaded.boolValue && !downloading.boolValue ) {
-                [fm startDownloadingUbiquitousItemAtURL:url error:NULL];
-            }
-            
-            // Check for files that should be uploaded, but have gotten 'stuck'.
-            NSNumber *uploaded = nil, *uploading = nil;
-            [url getResourceValue:&uploaded forKey:NSURLUbiquitousItemIsUploadedKey error:NULL];
-            [url getResourceValue:&uploading forKey:NSURLUbiquitousItemIsUploadingKey error:NULL];
-            if ( (uploaded && !uploaded.boolValue) && (uploading && !uploading.boolValue) ) {
-                if ( !_unfinishedUploadDatesByURL ) _unfinishedUploadDatesByURL = [[NSMutableDictionary alloc] init];
-                
-                NSDate *firstUploadFailureDate = [_unfinishedUploadDatesByURL objectForKey:url];
-                if ( !firstUploadFailureDate ) {
-                    [_unfinishedUploadDatesByURL setObject:[NSDate date] forKey:url];
-                }
-                else if ( [firstUploadFailureDate timeIntervalSinceNow] < -30*60 ) {
-                    // After 30 minutes, try to jolt file back into action by removing from iCloud, and putting back in.
-                    [_unfinishedUploadDatesByURL removeObjectForKey:url];
-                    
-                    NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"MovedAsideCloudFiles"];
-                    [fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL];
-                     
-                    NSString *tempFilePath = [tempDirPath stringByAppendingPathComponent:url.lastPathComponent];
-                    NSURL *tempURL = [NSURL fileURLWithPath:tempFilePath];
-                    
-                    __block NSError *anyError = nil;
-                    __block BOOL success = NO;
-                    NSFileCoordinator *fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
-                    
-                    [fileCoordinator coordinateReadingItemAtURL:url options:0 writingItemAtURL:tempURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
-                        [fm removeItemAtURL:newWritingURL error:NULL];
-                        success = [fm copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
-                        if ( !success ) NSLog(@"%@", anyError);
-                    }];
-                    
-                    [fileCoordinator coordinateWritingItemAtURL:tempURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
-                        [fm removeItemAtURL:newToURL error:NULL];
-                        success = [fm moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
-                        [fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
-                        if ( !success ) NSLog(@"%@", anyError);
-                    }];
-                    
-                    [fileCoordinator release];
-                }
-            }
-            else {
-                [_unfinishedUploadDatesByURL removeObjectForKey:url];
-            }
-        }
+        [self initiateDownloadsForURLs:urls];
+        [self checkFileUploadsForURLs:urls];
 
-        [fm release];
         dispatch_async(dispatch_get_main_queue(), ^{
             [self.cloudMetadataQuery enableUpdates];
         });
+        
         dispatch_release(queue);
     });
 }
