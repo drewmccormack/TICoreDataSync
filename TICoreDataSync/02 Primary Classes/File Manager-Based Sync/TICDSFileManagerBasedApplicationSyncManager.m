@@ -197,6 +197,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     
     // Create temporary directory for moved aside files
     NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"MovedAsideCloudFiles"];
+    [fm removeItemAtPath:tempDirPath error:NULL];
     [fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL];
     
     // Check for files that should be uploaded, but have gotten 'stuck'.
@@ -253,8 +254,8 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     
     // Remove very old entries that are no longer relevant.
     const NSTimeInterval UploadEntryExpiryTimeInterval = 7*24*60*60; // 7 days
-    urls = [NSArray arrayWithArray:_unfinishedUploadDatesByURL.allKeys];
-    for ( id url in urls ) {
+    NSArray *uploadURLs = [NSArray arrayWithArray:_unfinishedUploadDatesByURL.allKeys];
+    for ( id url in uploadURLs ) {
         NSDate *date = [_unfinishedUploadDatesByURL objectForKey:url];
         if ( [date timeIntervalSinceNow] < -UploadEntryExpiryTimeInterval ) {
             [_unfinishedUploadDatesByURL removeObjectForKey:url];
@@ -265,6 +266,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [fm createDirectoryAtPath:[uploadsFile stringByDeletingLastPathComponent] withIntermediateDirectories:YES attributes:nil error:NULL];
     [_unfinishedUploadDatesByURL writeToFile:uploadsFile atomically:YES];
     
+    [fm removeItemAtPath:tempDirPath error:NULL];
     [fm release];
 }
 
