@@ -206,15 +206,41 @@
 #pragma mark -
 #pragma mark Coordinated I/O
 
+
+- (void)executeFileCoordinatorBlockWithTimeout:(void(^)(void))block
+{
+    static const double TICDSOperationFileCoordinatorTimeout = 10.0; // 10 seconds
+    __block BOOL completed = NO;
+    
+    static dispatch_queue_t queue = NULL;
+    if ( !queue ) queue = dispatch_queue_create("filecoordinatorcancelqueue", DISPATCH_QUEUE_SERIAL);
+    
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, TICDSOperationFileCoordinatorTimeout * NSEC_PER_SEC);
+    dispatch_after(popTime, queue, ^{
+        if ( !completed ) {
+            [self.fileCoordinator cancel];
+            NSLog(@"File coordinator timed out for operation %@", self);
+        }
+    });
+    
+    block();
+    completed = YES;
+}
+
 - (BOOL)copyItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error
 {
     __block NSError *anyError = nil;
+    __block BOOL success = NO;
+    
     NSURL *readURL = [NSURL fileURLWithPath:fromPath];
     NSURL *writeURL = [NSURL fileURLWithPath:toPath];
-    __block BOOL success = NO;
-    [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
-        success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
+
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+            success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
+        }];
     }];
+
     if ( error ) *error = anyError;
     return success;
 }
@@ -224,11 +250,15 @@
     __block NSError *anyError = nil;
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     NSURL *toURL = [NSURL fileURLWithPath:toPath];
-    __block BOOL success = NO;    
-    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
-        success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
-        [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
+    __block BOOL success = NO;
+    
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+            success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
+            [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
+        }];
     }];
+    
     if ( error ) *error = anyError;
     return success;
 }
@@ -238,8 +268,10 @@
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting error:&anyError byAccessor:^(NSURL *newURL) {
-        success = [[self fileManager] removeItemAtURL:newURL error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting error:&anyError byAccessor:^(NSURL *newURL) {
+            success = [[self fileManager] removeItemAtURL:newURL error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return success;
@@ -249,8 +281,10 @@
 {
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     __block BOOL result = NO;
-    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
-        result = [[self fileManager] fileExistsAtPath:newURL.path];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
+            result = [[self fileManager] fileExistsAtPath:newURL.path];
+        }];
     }];
     return result;
 }
@@ -260,8 +294,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-        success = [[self fileManager] createDirectoryAtPath:newURL.path withIntermediateDirectories:createIntermediates attributes:attributes error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+            success = [[self fileManager] createDirectoryAtPath:newURL.path withIntermediateDirectories:createIntermediates attributes:attributes error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return success;
@@ -272,8 +308,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSArray *result = nil;
-    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-        result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+            result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return result;
@@ -284,8 +322,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSDictionary *result = nil;
-    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-        result = [[self fileManager] attributesOfItemAtPath:newURL.path error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+            result = [[self fileManager] attributesOfItemAtPath:newURL.path error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return result;
@@ -296,8 +336,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-        success = [data writeToFile:newURL.path options:0 error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+            success = [data writeToFile:newURL.path options:0 error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return success;
@@ -308,8 +350,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-        success = [object writeToFile:newURL.path atomically:NO];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+            success = [object writeToFile:newURL.path atomically:NO];
+        }];
     }];
     return success;
 }
@@ -319,8 +363,10 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSData *result = nil;
-    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-        result = [NSData dataWithContentsOfFile:newURL.path options:0 error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+            result = [NSData dataWithContentsOfFile:newURL.path options:0 error:&anyError];
+        }];
     }];
     if ( error ) *error = anyError;
     return result;
@@ -331,9 +377,11 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block id result = nil;
-    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-        NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:newURL.path];
-        result = [NSPropertyListSerialization propertyListWithStream:stream options:0 format:0 error:&anyError];
+    [self executeFileCoordinatorBlockWithTimeout:^{
+        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+            NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:newURL.path];
+            result = [NSPropertyListSerialization propertyListWithStream:stream options:0 format:0 error:&anyError];
+        }];
     }];
     return result;
 }
