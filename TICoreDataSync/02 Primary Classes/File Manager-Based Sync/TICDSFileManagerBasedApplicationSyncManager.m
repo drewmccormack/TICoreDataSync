@@ -184,7 +184,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [fm release];
 }
 
-- (void)checkFileUploadsForURLs:(NSArray *)urls
+- (void)checkUninitiatedUploadsForURLs:(NSArray *)urls
 {
     NSFileManager *fm = [[NSFileManager alloc] init];
 
@@ -283,7 +283,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     dispatch_queue_t queue = dispatch_queue_create("startdownloads", DISPATCH_QUEUE_SERIAL);
     dispatch_async(queue, ^{
         [self initiateDownloadsForURLs:urls];
-        [self checkFileUploadsForURLs:urls];
+        [self checkUninitiatedUploadsForURLs:urls];
 
         dispatch_async(dispatch_get_main_queue(), ^{
             [self.cloudMetadataQuery enableUpdates];
