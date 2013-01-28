@@ -38,7 +38,12 @@
         return;
     }
     
+    double originalPriority = [NSThread threadPriority];
+    [NSThread setThreadPriority:self.threadPriority];
+    
     [self main];
+    
+    [NSThread setThreadPriority:originalPriority];
 }
 
 - (void)main

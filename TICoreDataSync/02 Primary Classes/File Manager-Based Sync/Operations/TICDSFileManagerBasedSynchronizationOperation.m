@@ -187,6 +187,16 @@
 
 #pragma mark -
 #pragma mark Initialization and Deallocation
+
+- (id) init
+{
+    self = [super init];
+    if ( self ) {
+        self.threadPriority = 0.0;
+    }
+    return self;
+}
+
 - (void)dealloc
 {
     [_thisDocumentDirectoryPath release], _thisDocumentDirectoryPath = nil;
