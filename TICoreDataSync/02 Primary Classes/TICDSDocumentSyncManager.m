@@ -842,6 +842,11 @@
     TICDSLog(TICDSLogVerbosityEveryStep, @"Finished creating SyncChangesMOC");
 }
 
+- (void)synchronizationOperation:(TICDSSynchronizationOperation *)anOperation willSaveSyncChangesWithCount:(NSNumber *)numberOfChanges
+{
+    [self ti_alertDelegateWithSelector:@selector(documentSyncManager:willPerformBackgroundSaveOfSyncChangesWithCount:), numberOfChanges];
+}
+
 - (void)synchronizationOperation:(TICDSSynchronizationOperation *)anOperation processedChangeNumber:(NSNumber *)changeNumber outOfTotalChangeCount:(NSNumber *)totalChangeCount fromClientNamed:(NSString *)humanReadableClientName
 {
     [self ti_alertDelegateWithSelector:@selector(documentSyncManager:processedChangeNumber:outOfTotalChangeCount:fromClientNamed:), changeNumber, totalChangeCount, humanReadableClientName];

@@ -507,6 +507,13 @@
  @param aSyncManager The document sync manager object that sent the message. */
 - (void)documentSyncManagerDidContinueSynchronizing:(TICDSDocumentSyncManager *)aSyncManager;
 
+/** Informs delegate that there will be a background save which could have an impact on the app's performance
+ 
+ @param aSyncManager The document sync manager object that sent the message.
+ @param changeCount The number of changes that contribute to the save.
+ */
+- (void)documentSyncManager:(TICDSDocumentSyncManager *)aSyncManager willPerformBackgroundSaveOfSyncChangesWithCount:(NSNumber *)changeCount;
+
 /** Informs the delegate that changes were made to managed objects in the application's context on a background thread during the synchronization process.
  
  @param aSyncManager The document sync manager object that sent the message.
@@ -737,6 +744,11 @@
  @param anOperation The operation object that sent the message. */
 - (void)synchronizationOperationResumedFollowingResolutionOfConflict:(TICDSSynchronizationOperation *)anOperation;
 
+/** Informs the delegate that the operation has will save sync changes.
+ 
+ @param anOperation The operation object that sent the message. 
+ @param numberOfSets The number of changes sets in the save operation. */
+- (void)synchronizationOperation:(TICDSSynchronizationOperation *)anOperation willSaveSyncChangesWithCount:(NSNumber *)numberOfChanges;
 
 @end
 

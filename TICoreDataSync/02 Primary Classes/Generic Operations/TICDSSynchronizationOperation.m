@@ -369,6 +369,11 @@
     if( shouldContinue ) {
         anyError = nil;
         
+        // Tell delegate about save, which could be expensive
+        NSManagedObjectContext *bc = self.backgroundApplicationContext;
+        NSUInteger changedObjectCount = bc.insertedObjects.count + bc.deletedObjects.count + bc.updatedObjects.count;
+        [self ti_alertDelegateOnMainThreadWithSelector:@selector(synchronizationOperation:willSaveSyncChangesWithCount:) waitUntilDone:YES, [NSNumber numberWithUnsignedInteger:changedObjectCount]];
+        
         // Save Background Context (changes made to objects in application's context)
         BOOL success = [[self backgroundApplicationContext] save:&anyError];
         if( !success ) {

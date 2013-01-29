@@ -188,10 +188,10 @@
 #pragma mark -
 #pragma mark Initialization and Deallocation
 
-- (id) init
+- (id)initWithDelegate:(NSObject<TICDSSynchronizationOperationDelegate> *)aDelegate
 {
-    self = [super init];
-    if ( self ) {
+    self = [super initWithDelegate:aDelegate];
+    if (self) {
         self.threadPriority = 0.0;
     }
     return self;
