@@ -211,25 +211,23 @@
 #pragma mark -
 #pragma mark Coordinated I/O
 
-
-- (void)executeFileCoordinatorBlockWithTimeout:(void(^)(void))block
+// This queue is used to schedule file coordinator cancels, and serialize access to state variables
+// used to determine whether to continue a file operation.
++ (dispatch_queue_t)fileCoordinationDispatchQueue
 {
-    static const double TICDSOperationFileCoordinatorTimeout = 10.0; // 10 seconds
-    __block BOOL completed = NO;
-    
     static dispatch_queue_t queue = NULL;
-    if ( !queue ) queue = dispatch_queue_create("filecoordinatorcancelqueue", DISPATCH_QUEUE_SERIAL);
-    
-    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, TICDSOperationFileCoordinatorTimeout * NSEC_PER_SEC);
-    dispatch_after(popTime, queue, ^{
-        if ( !completed ) {
-            [self.fileCoordinator cancel];
-            NSLog(@"File coordinator timed out for operation %@", self);
-        }
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        queue = dispatch_queue_create("ticdsoperationfilecoordinatorqueue", DISPATCH_QUEUE_SERIAL);
     });
-    
-    block();
-    completed = YES;
+    return queue;
+}
+
++ (void)scheduleFileCoordinatorTimeoutBlock:(void(^)(void))block
+{
+    static const double TICDSOperationFileCoordinatorTimeout = 20.0;
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, TICDSOperationFileCoordinatorTimeout * NSEC_PER_SEC);
+    dispatch_after(popTime, [self fileCoordinationDispatchQueue], block);
 }
 
 - (BOOL)copyItemAtPath:(NSString *)fromPath toPath:(NSString *)toPath error:(NSError **)error
@@ -239,11 +237,20 @@
     
     NSURL *readURL = [NSURL fileURLWithPath:fromPath];
     NSURL *writeURL = [NSURL fileURLWithPath:toPath];
-
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
-            success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
-        }];
+    
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
+    }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
     }];
 
     if ( error ) *error = anyError;
@@ -257,11 +264,20 @@
     NSURL *toURL = [NSURL fileURLWithPath:toPath];
     __block BOOL success = NO;
     
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
-            success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
-            [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
-        }];
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
+    }];
+    
+    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:toURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [[self fileManager] moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
+        [self.fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
     }];
     
     if ( error ) *error = anyError;
@@ -273,12 +289,24 @@
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting error:&anyError byAccessor:^(NSURL *newURL) {
-            success = [[self fileManager] removeItemAtURL:newURL error:&anyError];
-        }];
+    
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateWritingItemAtURL:fromURL options:NSFileCoordinatorWritingForDeleting error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [[self fileManager] removeItemAtURL:newURL error:&anyError];
+    }];
+    
     if ( error ) *error = anyError;
+    
     return success;
 }
 
@@ -286,11 +314,22 @@
 {
     NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
     __block BOOL result = NO;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
-            result = [[self fileManager] fileExistsAtPath:newURL.path];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        result = [[self fileManager] fileExistsAtPath:newURL.path];
+    }];
+
     return result;
 }
 
@@ -299,11 +338,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-            success = [[self fileManager] createDirectoryAtPath:newURL.path withIntermediateDirectories:createIntermediates attributes:attributes error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [[self fileManager] createDirectoryAtPath:newURL.path withIntermediateDirectories:createIntermediates attributes:attributes error:&anyError];
+    }];
+
     if ( error ) *error = anyError;
     return success;
 }
@@ -313,11 +363,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSArray *result = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-            result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
+    }];
+    
     if ( error ) *error = anyError;
     return result;
 }
@@ -327,11 +388,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSDictionary *result = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-            result = [[self fileManager] attributesOfItemAtPath:newURL.path error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        result = [[self fileManager] attributesOfItemAtPath:newURL.path error:&anyError];
+    }];
+    
     if ( error ) *error = anyError;
     return result;
 }
@@ -341,11 +413,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-            success = [data writeToFile:newURL.path options:0 error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [data writeToFile:newURL.path options:0 error:&anyError];
+    }];
+    
     if ( error ) *error = anyError;
     return success;
 }
@@ -355,11 +438,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block BOOL success = NO;
     __block NSError *anyError = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
-            success = [object writeToFile:newURL.path atomically:NO];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        success = [object writeToFile:newURL.path atomically:NO];
+    }];
+    
     return success;
 }
 
@@ -368,11 +462,22 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block NSData *result = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-            result = [NSData dataWithContentsOfFile:newURL.path options:0 error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        result = [NSData dataWithContentsOfFile:newURL.path options:0 error:&anyError];
+    }];
+    
     if ( error ) *error = anyError;
     return result;
 }
@@ -382,12 +487,23 @@
     NSURL *url = [NSURL fileURLWithPath:path];
     __block NSError *anyError;
     __block id result = nil;
-    [self executeFileCoordinatorBlockWithTimeout:^{
-        [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
-            NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:newURL.path];
-            result = [NSPropertyListSerialization propertyListWithStream:stream options:0 format:0 error:&anyError];
-        }];
+
+    __block BOOL beganFileOperation = NO;
+    __block BOOL cancelled = NO;
+    [self.class scheduleFileCoordinatorTimeoutBlock:^{
+        if ( !beganFileOperation ) {
+            [self.fileCoordinator cancel];
+            cancelled = YES;
+        }
     }];
+    
+    [self.fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
+        if ( cancelled ) return;
+        NSInputStream *stream = [NSInputStream inputStreamWithFileAtPath:newURL.path];
+        result = [NSPropertyListSerialization propertyListWithStream:stream options:0 format:0 error:&anyError];
+    }];
+    
     return result;
 }
 
