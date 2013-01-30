@@ -178,12 +178,12 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
 
 - (void)checkUninitiatedUploadsForURLs:(NSArray *)urls
 {
-    NSFileManager *fm = [[NSFileManager alloc] init];
+    NSFileManager *fm = [[[NSFileManager alloc] init] autorelease];
     
     // Create temporary directory for moved aside files
-    NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:@"MovedAsideCloudFiles"];
-    [fm removeItemAtPath:tempDirPath error:NULL];
-    [fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL];
+    NSString *tempFilename = [NSString stringWithFormat:@"MovedAsideCloudFiles_%@", [[NSProcessInfo processInfo] globallyUniqueString]];
+    NSString *tempDirPath = [NSTemporaryDirectory() stringByAppendingPathComponent:tempFilename];
+    if ( ![fm createDirectoryAtPath:tempDirPath withIntermediateDirectories:YES attributes:nil error:NULL] ) return;
     
     // Check for files that should be uploaded, but have gotten 'stuck'.
     const NSTimeInterval ReuploadTimeInterval = 30*60; // 30 minutes
@@ -233,7 +233,6 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     }
     
     [fm removeItemAtPath:tempDirPath error:NULL];
-    [fm release];
 }
 
 - (void)cloudFilesDidChange:(NSNotification *)notif
