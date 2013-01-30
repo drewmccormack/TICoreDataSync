@@ -33,7 +33,9 @@ extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgre
 /** Start a new metadata query to asynchronously download cloud files not yet local. */
 - (void)refreshCloudMetadataQuery;
 
-/** Start a metadata query to scan cloud files, and determine how much data still needs to be uploaded and downloaded */
+/** Start a metadata query to scan iCloud files, and determine how much data still needs to be uploaded and downloaded.
+    Access the results using the provided properties. Use the notification to determine when the asynchronous
+    calculation is finished. */
 - (void)refreshCloudTransferProgress;
 
 #pragma mark Dropbox-Related Methods

@@ -288,13 +288,23 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
         for ( NSURL *url in urls ) {
             NSNumber *fileSizeNumber = nil;
             NSNumber *percentDownloaded = nil, *percentUploaded = nil;
-            [url getResourceValue:&fileSizeNumber forKey:NSMetadataItemFSSizeKey error:NULL];
-            [url getResourceValue:&percentDownloaded forKey:NSMetadataUbiquitousItemPercentDownloadedKey error:NULL];
-            [url getResourceValue:&percentUploaded forKey:NSMetadataUbiquitousItemPercentUploadedKey error:NULL];
+            NSNumber *uploaded = nil, *downloaded = nil;
+            
+            [url getResourceValue:&fileSizeNumber forKey:NSURLFileSizeKey error:NULL];
+            [url getResourceValue:&percentDownloaded forKey:NSURLUbiquitousItemPercentDownloadedKey error:NULL];
+            [url getResourceValue:&percentUploaded forKey:NSURLUbiquitousItemPercentUploadedKey error:NULL];
+            [url getResourceValue:&uploaded forKey:NSURLUbiquitousItemIsUploadedKey error:NULL];
+            [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:NULL];
 
             unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
-            if ( percentDownloaded && fileSizeNumber ) toDownload += percentDownloaded.doubleValue / 100.0 * fileSize;
-            if ( percentUploaded && fileSizeNumber ) toUpload += percentUploaded.doubleValue / 100.0 * fileSize;            
+            if ( uploaded && !uploaded.boolValue ) {
+                double percentage = percentUploaded ? percentUploaded.doubleValue : 100.0;
+                toUpload +=  percentage / 100.0 * fileSize;;
+            }
+            else if ( downloaded && !downloaded.boolValue ) {
+                double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
+                toDownload += percentage / 100.0 * fileSize;
+            }
         }
         dispatch_async(dispatch_get_main_queue(), ^{
             self.cloudBytesToDownload = toDownload;
