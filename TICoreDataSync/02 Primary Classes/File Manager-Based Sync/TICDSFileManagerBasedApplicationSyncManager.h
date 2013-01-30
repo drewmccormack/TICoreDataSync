@@ -24,7 +24,6 @@ extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgre
     NSURL *_applicationContainingDirectoryLocation;
     NSMetadataQuery *_cloudMetadataQuery;
     NSMetadataQuery *_transferProgressMetadataQuery;
-    NSMutableDictionary *_unfinishedUploadDatesByURL;
 }
 
 @property (readonly) unsigned long long cloudBytesToUpload, cloudBytesToDownload;
