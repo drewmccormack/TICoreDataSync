@@ -85,7 +85,12 @@
     success = [self moveItemAtPath:[aLocation path] toPath:uploadPath error:&anyError];
     
     if( !success ) {
-        [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
+        // Check that the directory exists, and try to recover
+        if ( ![self fileExistsAtPath:self.thisDocumentSyncChangesThisClientDirectoryPath] ) {
+            [self createDirectoryAtPath:self.thisDocumentSyncChangesThisClientDirectoryPath withIntermediateDirectories:YES attributes:nil error:NULL];
+            success = [self moveItemAtPath:[aLocation path] toPath:uploadPath error:&anyError];
+        }
+        if ( !success ) [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
     }
     
     [self uploadedLocalSyncChangeSetFileSuccessfully:success];
