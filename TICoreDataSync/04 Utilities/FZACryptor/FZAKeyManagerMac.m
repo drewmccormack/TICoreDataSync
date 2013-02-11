@@ -58,6 +58,7 @@ void FZAReportKeychainError(OSStatus keychainStatus, NSString *msg) {
     ssize_t bytesRead = read(fd, randomBytes, length);
     close(fd);
     if (bytesRead < length) {
+        free(randomBytes);
         return nil;
     }
     NSData *randomData = [NSData dataWithBytes: randomBytes length: length];
@@ -130,7 +131,7 @@ void FZAReportKeychainError(OSStatus keychainStatus, NSString *msg) {
         return nil;
     }
     NSData *key = [NSData dataWithBytes: keyBytes length: keyLength];
-    SecKeychainItemFreeContent(NULL, keyBytes);
+    SecKeychainItemFreeAttributesAndData(NULL, keyBytes);
     return key;
 }
 
