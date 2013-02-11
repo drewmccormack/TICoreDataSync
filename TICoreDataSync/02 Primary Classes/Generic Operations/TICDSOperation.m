@@ -313,24 +313,7 @@
 
 - (BOOL)fileExistsAtPath:(NSString *)fromPath
 {
-    NSURL *fromURL = [NSURL fileURLWithPath:fromPath];
-    __block BOOL result = NO;
-
-    __block BOOL beganFileOperation = NO;
-    __block BOOL cancelled = NO;
-    [self.class scheduleFileCoordinatorTimeoutBlock:^{
-        if ( !beganFileOperation ) {
-            [self.fileCoordinator cancel];
-            cancelled = YES;
-        }
-    }];
-    
-    [self.fileCoordinator coordinateReadingItemAtURL:fromURL options:NSFileCoordinatorReadingWithoutChanges error:NULL byAccessor:^(NSURL *newURL) {
-        dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
-        if ( cancelled ) return;
-        result = [[self fileManager] fileExistsAtPath:newURL.path];
-    }];
-
+    BOOL result = [[self fileManager] fileExistsAtPath:fromPath];
     return result;
 }
 
