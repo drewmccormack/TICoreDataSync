@@ -250,6 +250,7 @@
     [self.fileCoordinator coordinateReadingItemAtURL:readURL options:0 writingItemAtURL:writeURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
         dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
         if ( cancelled ) return;
+        [[self fileManager] removeItemAtURL:newWritingURL error:NULL];
         success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
     }];
 
