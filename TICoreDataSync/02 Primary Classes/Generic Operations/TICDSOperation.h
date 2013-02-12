@@ -38,7 +38,6 @@
     NSError *_error;
     
     NSFileManager *_fileManager;
-    NSFileCoordinator *_fileCoordinator;
     NSString *_tempFileDirectoryPath;
     
     NSString *_clientIdentifier;
@@ -133,9 +132,6 @@
 
 /** An `NSFileManager` object suitable for use by this operation. */
 @property (nonatomic, readonly, retain) NSFileManager *fileManager;
-
-/** An `NSFileCoordinator` object suitable for use by this operation. */
-@property (nonatomic, readonly, retain) NSFileCoordinator *fileCoordinator;
 
 /** The path to a directory inside `NSTemporaryDirectory()` guaranteed to be unique to this operation, created when path first requested and removed when operation finishes. */
 @property (nonatomic, retain) NSString *tempFileDirectoryPath;
