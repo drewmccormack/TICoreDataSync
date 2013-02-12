@@ -810,25 +810,31 @@
 
 - (void)applyAttributeChangeSyncChange:(TICDSSyncChange *)aSyncChange
 {
-    TICDSLog(TICDSLogVerbosityEveryStep, @"Applying Attribute Change sync change");
-    
-    TICDSSynchronizedManagedObject *object = (id)[self backgroundApplicationContextObjectForEntityName:[aSyncChange objectEntityName] syncIdentifier:[aSyncChange objectSyncID]];
-    
-    if( !object ) {
-        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Object not found locally for attribute change [%@] %@", aSyncChange, [aSyncChange objectEntityName]);
-        [[self synchronizationWarnings] addObject:[TICDSUtilities syncWarningOfType:TICDSSyncWarningTypeObjectNotFoundLocallyForRemoteAttributeSyncChange entityName:[aSyncChange objectEntityName] relatedObjectEntityName:nil attributes:[aSyncChange changedAttributes]]];
-        return;
+    @try {
+        TICDSLog(TICDSLogVerbosityEveryStep, @"Applying Attribute Change sync change");
+        
+        TICDSSynchronizedManagedObject *object = (id)[self backgroundApplicationContextObjectForEntityName:[aSyncChange objectEntityName] syncIdentifier:[aSyncChange objectSyncID]];
+        
+        if( !object || object.managedObjectContext == nil || object.isDeleted ) {
+            TICDSLog(TICDSLogVerbosityErrorsOnly, @"Object not found locally for attribute change [%@] %@", aSyncChange, [aSyncChange objectEntityName]);
+            [[self synchronizationWarnings] addObject:[TICDSUtilities syncWarningOfType:TICDSSyncWarningTypeObjectNotFoundLocallyForRemoteAttributeSyncChange entityName:[aSyncChange objectEntityName] relatedObjectEntityName:nil attributes:[aSyncChange changedAttributes]]];
+            return;
+        }
+        
+        TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", aSyncChange, [aSyncChange objectEntityName]);
+        
+        [object willChangeValueForKey:[aSyncChange relevantKey]];
+        id transformedValue = [aSyncChange changedAttributes];
+        transformedValue = [object reverseTransformedValueOfAttribute:[aSyncChange relevantKey] withValue:transformedValue];
+        [object setPrimitiveValue:transformedValue forKey:[aSyncChange relevantKey]];
+        [object didChangeValueForKey:[aSyncChange relevantKey]];
+        
+        TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Changed attribute on object: %@", object);
     }
-    
-    TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", aSyncChange, [aSyncChange objectEntityName]);
-
-    [object willChangeValueForKey:[aSyncChange relevantKey]];
-    id transformedValue = [aSyncChange changedAttributes];
-    transformedValue = [object reverseTransformedValueOfAttribute:[aSyncChange relevantKey] withValue:transformedValue];
-    [object setPrimitiveValue:transformedValue forKey:[aSyncChange relevantKey]];
-    [object didChangeValueForKey:[aSyncChange relevantKey]];
-    
-    TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Changed attribute on object: %@", object);
+    @catch ( NSException *exception ) {
+        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Exception thrown while applying attribute change [%@] %@: %@", aSyncChange, [aSyncChange objectEntityName], exception);
+        [[self synchronizationWarnings] addObject:[TICDSUtilities syncWarningOfType:TICDSSyncWarningTypeObjectExceptionAroseWhileApplyingAttributeSyncChange entityName:[aSyncChange objectEntityName] relatedObjectEntityName:nil attributes:[aSyncChange changedAttributes]]];
+    }
 }
 
 - (void)applyToOneRelationshipSyncChange:(TICDSSyncChange *)aSyncChange
