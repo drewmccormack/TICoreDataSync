@@ -13,7 +13,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
 @interface TICDSFileManagerBasedApplicationSyncManager ()
 
 @property (nonatomic, retain) NSMetadataQuery *cloudMetadataQuery;
-@property (readwrite) unsigned long long cloudBytesToUpload, cloudBytesToDownload;
+@property (readwrite) long long cloudBytesToUpload, cloudBytesToDownload;
 
 @end
 
@@ -176,10 +176,18 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [fm release];
 }
 
+#pragma mark Downloading All Cloud Data
+
 - (void)downloadAllCloudData:(void(^)(BOOL complete, long long remainingBytes, BOOL *stop))block
 {
     if ( _downloadMetadataQuery ) return;
     _downloadProgressBlock = [block copy];
+    _cloudBytesToDownload = -1;
+    [self beginDownloadAllCloudDataQuery];
+    [self beginReportingDownloadProgress];
+}
+
+- (void)beginDownloadAllCloudDataQuery {
     _downloadMetadataQuery = [[NSMetadataQuery alloc] init];
     _downloadMetadataQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
     _downloadMetadataQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
@@ -192,47 +200,55 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [_downloadMetadataQuery disableUpdates];
     
     NSUInteger count = [_downloadMetadataQuery resultCount];
-    NSMutableArray *urls = [NSMutableArray arrayWithCapacity:count];
+    NSMutableArray *urls = [[NSMutableArray alloc] initWithCapacity:count];
     for ( NSUInteger i = 0; i < count; i++ ) {
         NSURL *url = [_downloadMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
         [urls addObject:url];
     }
     
-    dispatch_queue_t queue = dispatch_queue_create("downloadcloudfiles", DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        __block BOOL stop = NO;
-        unsigned long long toDownload = 0;
-        do {
-            toDownload = 0;
-            @autoreleasepool {
-                for ( NSURL *url in urls ) {
-                    NSNumber *fileSizeNumber = nil;
-                    NSNumber *percentDownloaded = nil;
-                    NSNumber *downloaded = nil;
-                    
-                    [url getResourceValue:&fileSizeNumber forKey:NSURLFileSizeKey error:NULL];
-                    [url getResourceValue:&percentDownloaded forKey:NSURLUbiquitousItemPercentDownloadedKey error:NULL];
-                    [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:NULL];
-                    
-                    unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
-                    if ( downloaded && !downloaded.boolValue ) {
-                        double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
-                        toDownload += percentage / 100.0 * fileSize;
-                    }
-                }
-                dispatch_sync(dispatch_get_main_queue(), ^{
-                    if ( _downloadProgressBlock ) _downloadProgressBlock(toDownload <= 0, toDownload, &stop);
-                });
-                [NSThread sleepForTimeInterval:1.0];
-            }
-        } while ( toDownload > 0 && !stop );
-        [_downloadProgressBlock release]; _downloadProgressBlock = nil;
-        dispatch_release(queue);
-    });
+    unsigned long long toDownload = 0;
+    for ( NSURL *url in urls ) {
+        NSNumber *fileSizeNumber = nil;
+        NSNumber *percentDownloaded = nil;
+        NSNumber *downloaded = nil;
+        
+        [url getResourceValue:&fileSizeNumber forKey:NSURLFileSizeKey error:NULL];
+        [url getResourceValue:&percentDownloaded forKey:NSURLUbiquitousItemPercentDownloadedKey error:NULL];
+        [url getResourceValue:&downloaded forKey:NSURLUbiquitousItemIsDownloadedKey error:NULL];
+        
+        unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
+        if ( downloaded && !downloaded.boolValue ) {
+            double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
+            toDownload += percentage / 100.0 * fileSize;
+        }
+    }
+    [urls release];
+    
+    _cloudBytesToDownload = toDownload;
     
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:_downloadMetadataQuery];
     [_downloadMetadataQuery stopQuery];
     [_downloadMetadataQuery release], _downloadMetadataQuery = nil;
+    
+    if ( _cloudBytesToDownload > 0 ) [self beginDownloadAllCloudDataQuery];
+}
+
+- (void)beginReportingDownloadProgress
+{
+    dispatch_queue_t queue = dispatch_queue_create("downloadcloudfiles", DISPATCH_QUEUE_SERIAL);
+    dispatch_async(queue, ^{
+        __block BOOL stop = NO;
+        do {
+            @autoreleasepool {
+                dispatch_sync(dispatch_get_main_queue(), ^{
+                    if ( _downloadProgressBlock ) _downloadProgressBlock(_cloudBytesToDownload == 0, _cloudBytesToDownload, &stop);
+                });
+                [NSThread sleepForTimeInterval:1.0];
+            }
+        } while ( _cloudBytesToDownload != 0 && !stop );
+        [_downloadProgressBlock release]; _downloadProgressBlock = nil;
+        dispatch_release(queue);
+    });
 }
 
 - (void)checkUninitiatedUploadsForURLs:(NSArray *)urls

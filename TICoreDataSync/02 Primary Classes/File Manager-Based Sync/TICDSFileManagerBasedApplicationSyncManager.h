@@ -28,7 +28,7 @@ extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgre
     void (^_downloadProgressBlock)(BOOL complete, long long remainingBytes, BOOL *stop);
 }
 
-@property (readonly) unsigned long long cloudBytesToUpload, cloudBytesToDownload;
+@property (readonly) long long cloudBytesToUpload, cloudBytesToDownload;
 
 #pragma mark iCloud-Related Methods
 
