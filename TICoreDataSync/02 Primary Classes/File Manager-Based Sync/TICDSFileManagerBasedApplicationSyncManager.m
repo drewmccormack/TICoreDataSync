@@ -183,31 +183,38 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     if ( _downloadMetadataQuery ) return;
     _downloadProgressBlock = [block copy];
     _cloudBytesToDownload = -1;
+    _downloadingBytesRemainingByURL = [[NSMutableDictionary alloc] initWithCapacity:200];
     [self beginDownloadAllCloudDataQuery];
-    [self beginReportingDownloadProgress];
 }
 
 - (void)beginDownloadAllCloudDataQuery {
     _downloadMetadataQuery = [[NSMetadataQuery alloc] init];
+    _downloadMetadataQuery.notificationBatchingInterval = 1.0;
     _downloadMetadataQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
     _downloadMetadataQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
-    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(finishedGatheringCloudDownloadURLs:) name:NSMetadataQueryDidFinishGatheringNotification object:_downloadMetadataQuery];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(gatheredCloudDownloadURLs:) name:NSMetadataQueryDidFinishGatheringNotification object:_downloadMetadataQuery];
+    [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(gatheredCloudDownloadURLs:) name:NSMetadataQueryDidUpdateNotification object:_downloadMetadataQuery];
     [_downloadMetadataQuery startQuery];
 }
 
-- (void)finishedGatheringCloudDownloadURLs:(NSNotification *)notif
+- (void)gatheredCloudDownloadURLs:(NSNotification *)notif
 {
     [_downloadMetadataQuery disableUpdates];
     
     NSUInteger count = [_downloadMetadataQuery resultCount];
-    NSMutableArray *urls = [[NSMutableArray alloc] initWithCapacity:count];
+    NSMutableArray *newURLs = [[NSMutableArray alloc] initWithCapacity:count];
     for ( NSUInteger i = 0; i < count; i++ ) {
         NSURL *url = [_downloadMetadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
-        [urls addObject:url];
+        [newURLs addObject:url];
     }
     
-    unsigned long long toDownload = 0;
-    for ( NSURL *url in urls ) {
+    if ( _cloudBytesToDownload < 0 ) _cloudBytesToDownload = 0;
+    for ( NSURL *url in newURLs ) {
+        long long existingURLBytes = [_downloadingBytesRemainingByURL[url] longLongValue];
+        _cloudBytesToDownload -= existingURLBytes;
+        
+        [_downloadingBytesRemainingByURL removeObjectForKey:url];
+        
         NSNumber *fileSizeNumber = nil;
         NSNumber *percentDownloaded = nil;
         NSNumber *downloaded = nil;
@@ -219,36 +226,27 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
         unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
         if ( downloaded && !downloaded.boolValue ) {
             double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
-            toDownload += percentage / 100.0 * fileSize;
+            long long fileDownloadSize = percentage / 100.0 * fileSize;
+            _cloudBytesToDownload += fileDownloadSize;
+            _downloadingBytesRemainingByURL[url] = @(fileDownloadSize);
         }
     }
-    [urls release];
+    [newURLs release];
     
-    _cloudBytesToDownload = toDownload;
-    
-    [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:_downloadMetadataQuery];
-    [_downloadMetadataQuery stopQuery];
-    [_downloadMetadataQuery release], _downloadMetadataQuery = nil;
-    
-    if ( _cloudBytesToDownload > 0 ) [self beginDownloadAllCloudDataQuery];
-}
+    BOOL cancelled = NO;
+    if ( _downloadProgressBlock ) _downloadProgressBlock(_cloudBytesToDownload == 0, _cloudBytesToDownload, &cancelled);
 
-- (void)beginReportingDownloadProgress
-{
-    dispatch_queue_t queue = dispatch_queue_create("downloadcloudfiles", DISPATCH_QUEUE_SERIAL);
-    dispatch_async(queue, ^{
-        __block BOOL stop = NO;
-        do {
-            @autoreleasepool {
-                dispatch_sync(dispatch_get_main_queue(), ^{
-                    if ( _downloadProgressBlock ) _downloadProgressBlock(_cloudBytesToDownload == 0, _cloudBytesToDownload, &stop);
-                });
-                [NSThread sleepForTimeInterval:1.0];
-            }
-        } while ( _cloudBytesToDownload != 0 && !stop );
+    if ( _cloudBytesToDownload == 0 || cancelled ) {
+        [_downloadingBytesRemainingByURL release], _downloadingBytesRemainingByURL = nil;
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:_downloadMetadataQuery];
+        [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidUpdateNotification object:_downloadMetadataQuery];
+        [_downloadMetadataQuery stopQuery];
+        [_downloadMetadataQuery release], _downloadMetadataQuery = nil;
         [_downloadProgressBlock release]; _downloadProgressBlock = nil;
-        dispatch_release(queue);
-    });
+    }
+    else {
+        [_downloadMetadataQuery enableUpdates];
+    }
 }
 
 - (void)checkUninitiatedUploadsForURLs:(NSArray *)urls
@@ -515,6 +513,8 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     [_downloadProgressBlock release]; _downloadProgressBlock = nil;
     [_transferProgressMetadataQuery stopQuery];
     [_transferProgressMetadataQuery release], _transferProgressMetadataQuery = nil;
+    
+    [_downloadingBytesRemainingByURL release], _downloadingBytesRemainingByURL = nil;
     
     [super dealloc];
 }

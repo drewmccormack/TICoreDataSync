@@ -25,6 +25,7 @@ extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgre
     NSMetadataQuery *_cloudMetadataQuery;
     NSMetadataQuery *_transferProgressMetadataQuery;
     NSMetadataQuery *_downloadMetadataQuery;
+    NSMutableDictionary *_downloadingBytesRemainingByURL;
     void (^_downloadProgressBlock)(BOOL complete, long long remainingBytes, BOOL *stop);
 }
 
