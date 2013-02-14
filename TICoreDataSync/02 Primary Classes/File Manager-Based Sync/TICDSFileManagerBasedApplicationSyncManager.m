@@ -211,18 +211,17 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
                         __block BOOL success = NO;
                         NSFileCoordinator *fileCoordinator = [[NSFileCoordinator alloc] initWithFilePresenter:nil];
                         
-                        [fileCoordinator coordinateReadingItemAtURL:url options:0 writingItemAtURL:tempURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newReadingURL, NSURL *newWritingURL) {
-                            [fm removeItemAtURL:newWritingURL error:NULL];
-                            success = [fm copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
-                            if ( !success ) NSLog(@"%@", anyError);
-                        }];
+                        void (^swapOutAndInBlock)(NSURL *, NSURL *) = ^(NSURL *newURL, NSURL *newTempURL) {
+                            [fm removeItemAtURL:newTempURL error:NULL];
+                            success = [fm copyItemAtURL:newURL toURL:newTempURL error:NULL];
+                            if ( !success ) return;
+                            
+                            [fm removeItemAtURL:newURL error:NULL];
+                            [fm moveItemAtURL:newTempURL toURL:newURL error:NULL];
+                        };
                         
-                        if ( success ) [fileCoordinator coordinateWritingItemAtURL:tempURL options:NSFileCoordinatorWritingForDeleting writingItemAtURL:url options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:^(NSURL *newFromURL, NSURL *newToURL) {
-                            [fm removeItemAtURL:newToURL error:NULL];
-                            success = [fm moveItemAtURL:newFromURL toURL:newToURL error:&anyError];
-                            [fileCoordinator itemAtURL:newFromURL didMoveToURL:newToURL];
-                            if ( !success ) NSLog(@"%@", anyError);
-                        }];
+                        [fileCoordinator coordinateWritingItemAtURL:url options:NSFileCoordinatorWritingForReplacing writingItemAtURL:tempURL options:NSFileCoordinatorWritingForReplacing error:&anyError byAccessor:swapOutAndInBlock];
+                        if ( anyError ) swapOutAndInBlock(url, tempURL); // Attempt to force it
                         
                         [fileCoordinator release];
                     }
