@@ -129,7 +129,7 @@
         unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
         if ( downloaded && !downloaded.boolValue ) {
             double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
-            long long fileDownloadSize = percentage / 100.0 * fileSize;
+            long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
             ubiquitousBytesToDownload += fileDownloadSize;
             downloadingBytesByURL[url] = @(fileDownloadSize);
             
@@ -139,7 +139,7 @@
         }
         else if ( uploaded && !uploaded.boolValue ) {
             double percentage = percentUploaded ? percentUploaded.doubleValue : 100.0;
-            long long fileDownloadSize = percentage / 100.0 * fileSize;
+            long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
             ubiquitousBytesToUpload += fileDownloadSize;
             uploadingBytesByURL[url] = @(fileDownloadSize);
             
