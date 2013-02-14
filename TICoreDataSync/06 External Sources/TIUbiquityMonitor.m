@@ -106,6 +106,7 @@
 {
     [metadataQuery disableUpdates];
     
+    NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
     NSUInteger count = [metadataQuery resultCount];
     for ( NSUInteger i = 0; i < count; i++ ) {
         NSURL *url = [metadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
@@ -129,12 +130,20 @@
             long long fileDownloadSize = percentage / 100.0 * fileSize;
             ubiquitousBytesToDownload += fileDownloadSize;
             downloadingBytesByURL[url] = @(fileDownloadSize);
+            
+            // Start download
+            NSError *error = nil;
+            if ( percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
         }
         else if ( uploaded && !uploaded.boolValue ) {
             double percentage = percentUploaded ? percentUploaded.doubleValue : 100.0;
             long long fileDownloadSize = percentage / 100.0 * fileSize;
             ubiquitousBytesToUpload += fileDownloadSize;
             uploadingBytesByURL[url] = @(fileDownloadSize);
+            
+            // Force upload
+            NSError *error = nil;
+            if ( percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
         }
     }
     
