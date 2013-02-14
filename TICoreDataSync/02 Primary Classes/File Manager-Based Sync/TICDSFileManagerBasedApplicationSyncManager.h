@@ -23,26 +23,12 @@ extern NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgre
 @private
     NSURL *_applicationContainingDirectoryLocation;
     NSMetadataQuery *_cloudMetadataQuery;
-    NSMetadataQuery *_transferProgressMetadataQuery;
-    NSMetadataQuery *_downloadMetadataQuery;
-    NSMutableDictionary *_downloadingBytesRemainingByURL;
-    void (^_downloadProgressBlock)(BOOL complete, long long remainingBytes, BOOL *stop);
 }
-
-@property (readonly) long long cloudBytesToUpload, cloudBytesToDownload;
 
 #pragma mark iCloud-Related Methods
 
 /** Start a new metadata query to asynchronously download cloud files not yet local. */
 - (void)refreshCloudMetadataQuery;
-
-/** Use a metadata query to download all data from the cloud. */
-- (void)downloadAllCloudData:(void(^)(BOOL complete, long long remainingBytes, BOOL *stop))block;
-
-/** Start a metadata query to scan iCloud files, and determine how much data still needs to be uploaded and downloaded.
-    Access the results using the provided properties. Use the notification to determine when the asynchronous
-    calculation is finished. */
-- (void)refreshCloudTransferProgress;
 
 #pragma mark Dropbox-Related Methods
 /** @name Dropbox-Related Methods */

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07DD945A16CCED3B0047B456 /* TIUbiquityMonitor.m in Sources */ = {isa = PBXBuildFile; fileRef = 07DD945916CCED3B0047B456 /* TIUbiquityMonitor.m */; };
 		1382B2691448B8F800950A6F /* TICDSChangeIntegrityStoreManager.m in Sources */ = {isa = PBXBuildFile; fileRef = 1382B2681448B8F800950A6F /* TICDSChangeIntegrityStoreManager.m */; };
 		1382B26D1448B90800950A6F /* TICDSSynchronizationOperationManagedObjectContext.m in Sources */ = {isa = PBXBuildFile; fileRef = 1382B26C1448B90800950A6F /* TICDSSynchronizationOperationManagedObjectContext.m */; };
 		138EDADE1549C99000FA4432 /* DropboxSDK.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 138EDADD1549C99000FA4432 /* DropboxSDK.framework */; };
@@ -97,6 +98,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07DD945816CCED3B0047B456 /* TIUbiquityMonitor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TIUbiquityMonitor.h; sourceTree = "<group>"; };
+		07DD945916CCED3B0047B456 /* TIUbiquityMonitor.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TIUbiquityMonitor.m; sourceTree = "<group>"; };
 		1382B2671448B8F800950A6F /* TICDSChangeIntegrityStoreManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TICDSChangeIntegrityStoreManager.h; sourceTree = "<group>"; };
 		1382B2681448B8F800950A6F /* TICDSChangeIntegrityStoreManager.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TICDSChangeIntegrityStoreManager.m; sourceTree = "<group>"; };
 		1382B26B1448B90800950A6F /* TICDSSynchronizationOperationManagedObjectContext.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = TICDSSynchronizationOperationManagedObjectContext.h; sourceTree = "<group>"; };
@@ -581,6 +584,8 @@
 		3890AAAC1397ABBB00CC64B5 /* 06 External Sources */ = {
 			isa = PBXGroup;
 			children = (
+				07DD945816CCED3B0047B456 /* TIUbiquityMonitor.h */,
+				07DD945916CCED3B0047B456 /* TIUbiquityMonitor.m */,
 				3890AAAD1397ABBB00CC64B5 /* NSObject+TIDelegateCommunications.h */,
 				3890AAAE1397ABBB00CC64B5 /* NSObject+TIDelegateCommunications.m */,
 				3890AAAF1397ABBB00CC64B5 /* TICoreDataFactory.h */,
@@ -735,6 +740,7 @@
 				38AE078B13EC606B002F90A6 /* TICDSDropboxSDKBasedRemoveAllRemoteSyncDataOperation.m in Sources */,
 				1382B2691448B8F800950A6F /* TICDSChangeIntegrityStoreManager.m in Sources */,
 				1382B26D1448B90800950A6F /* TICDSSynchronizationOperationManagedObjectContext.m in Sources */,
+				07DD945A16CCED3B0047B456 /* TIUbiquityMonitor.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -815,7 +821,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iOSNotebook/iOSNotebook-Prefix.pch";
 				INFOPLIST_FILE = "iOSNotebook/iOSNotebook-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 3.1.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -833,7 +839,7 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "iOSNotebook/iOSNotebook-Prefix.pch";
 				INFOPLIST_FILE = "iOSNotebook/iOSNotebook-Info.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 3.1.3;
+				IPHONEOS_DEPLOYMENT_TARGET = 6.0;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				VALIDATE_PRODUCT = YES;
 				WRAPPER_EXTENSION = app;
