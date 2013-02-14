@@ -24,12 +24,13 @@
     NSMetadataQuery *metadataQuery;
     NSMutableDictionary *downloadingBytesByURL, *uploadingBytesByURL;
     void (^progressCallbackBlock)(long long toDownload, long long toUpload);
-    BOOL isMonitoring;
 }
 
 @synthesize ubiquitousBytesToDownload = ubiquitousBytesToDownload;
 @synthesize ubiquitousBytesToUpload = ubiquitousBytesToUpload;
 @synthesize predicate = predictate;
+@synthesize initiateTransfers = initiateTransfers;
+@synthesize isMonitoring = isMonitoring;
 
 #pragma mark Initialization and Deallocation
 
@@ -40,6 +41,7 @@
         predictate = [newPredicate retain];
         progressCallbackBlock = NULL;
         isMonitoring = NO;
+        initiateTransfers = NO;
         metadataQuery = nil;
         downloadingBytesByURL = uploadingBytesByURL = nil;
         ubiquitousBytesToUpload = ubiquitousBytesToDownload = 0;
@@ -133,7 +135,7 @@
             
             // Start download
             NSError *error = nil;
-            if ( percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
+            if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
         }
         else if ( uploaded && !uploaded.boolValue ) {
             double percentage = percentUploaded ? percentUploaded.doubleValue : 100.0;
@@ -143,7 +145,7 @@
             
             // Force upload
             NSError *error = nil;
-            if ( percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
+            if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
         }
     }
     

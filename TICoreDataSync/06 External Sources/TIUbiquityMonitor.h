@@ -24,6 +24,8 @@
 
 @property (readonly) long long ubiquitousBytesToUpload, ubiquitousBytesToDownload;
 @property (readonly) NSPredicate *predicate;
+@property (readwrite) BOOL initiateTransfers;
+@property (readonly) BOOL isMonitoring;
 
 - (id)initWithPredicate:(NSPredicate *)predicate;
 
