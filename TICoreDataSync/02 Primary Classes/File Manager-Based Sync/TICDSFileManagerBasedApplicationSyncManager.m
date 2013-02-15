@@ -156,6 +156,7 @@ NSString * const TICDSApplicationSyncManagerDidRefreshCloudTransferProgressNotif
     NSMetadataQuery *newQuery = [[[NSMetadataQuery alloc] init] autorelease];
     newQuery.searchScopes = [NSArray arrayWithObject:NSMetadataQueryUbiquitousDataScope];
     newQuery.predicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    newQuery.notificationBatchingInterval = 60.0;
     self.cloudMetadataQuery = newQuery;
 }
 
