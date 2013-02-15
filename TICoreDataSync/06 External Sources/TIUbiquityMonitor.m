@@ -95,7 +95,7 @@
     [metadataQuery release], metadataQuery = nil;
     
     // Release callback last, because it could be retaining objects
-    [progressCallbackBlock autorelease], progressCallbackBlock = nil;
+    [progressCallbackBlock autorelease], progressCallbackBlock = NULL;
 }
 
 - (void)update:(NSNotification *)notif
