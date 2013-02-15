@@ -49,7 +49,7 @@
 
 - (id)init
 {
-    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K = FALSE OR %K = FALSE", NSMetadataUbiquitousItemIsDownloadedKey, NSMetadataUbiquitousItemIsUploadedKey];
+    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
     return [self initWithPredicate:newPredicate];
 }
 
@@ -114,7 +114,7 @@
         NSNumber *uploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemIsUploadedKey forResultAtIndex:i];
         NSNumber *fileSizeNumber = [metadataQuery valueOfAttribute:NSMetadataItemFSSizeKey forResultAtIndex:i];
 
-        unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
+        unsigned long long fileSize = fileSizeNumber ? fileSizeNumber.unsignedLongLongValue : 0;
         if ( downloaded && !downloaded.boolValue ) {
             double percentage = percentDownloaded ? percentDownloaded.doubleValue : 0.0;
             long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
