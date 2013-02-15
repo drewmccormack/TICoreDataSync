@@ -245,7 +245,7 @@
         success = [[self fileManager] copyItemAtURL:newReadingURL toURL:newWritingURL error:&anyError];
     }];
     
-    if ( !success ) {
+    if ( !success && !cancelled ) {
         // Force it
         anyError = nil;
         [[self fileManager] removeItemAtURL:writeURL error:NULL];

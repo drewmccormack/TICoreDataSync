@@ -22,7 +22,6 @@
 
 @implementation TIUbiquityMonitor {
     NSMetadataQuery *metadataQuery;
-    NSMutableDictionary *downloadingBytesByURL, *uploadingBytesByURL;
     void (^progressCallbackBlock)(long long toDownload, long long toUpload);
 }
 
@@ -43,7 +42,6 @@
         isMonitoring = NO;
         initiateTransfers = NO;
         metadataQuery = nil;
-        downloadingBytesByURL = uploadingBytesByURL = nil;
         ubiquitousBytesToUpload = ubiquitousBytesToDownload = 0;
     }
     return self;
@@ -51,7 +49,7 @@
 
 - (id)init
 {
-    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K = FALSE OR %K = FALSE", NSMetadataUbiquitousItemIsDownloadedKey, NSMetadataUbiquitousItemIsUploadedKey];
     return [self initWithPredicate:newPredicate];
 }
 
@@ -71,8 +69,6 @@
     isMonitoring = YES;
     
     progressCallbackBlock = [block copy];
-    downloadingBytesByURL = [[NSMutableDictionary alloc] initWithCapacity:200];
-    uploadingBytesByURL = [[NSMutableDictionary alloc] initWithCapacity:200];
 
     metadataQuery = [[NSMetadataQuery alloc] init];
     metadataQuery.notificationBatchingInterval = 1.0;
@@ -91,8 +87,6 @@
     [metadataQuery disableUpdates];
 
     isMonitoring = NO;
-    [downloadingBytesByURL release], downloadingBytesByURL = nil;
-    [uploadingBytesByURL release], uploadingBytesByURL = nil;
         
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:metadataQuery];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidUpdateNotification object:metadataQuery];
@@ -110,15 +104,9 @@
     
     NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
     NSUInteger count = [metadataQuery resultCount];
+    long long toDownload = 0, toUpload = 0;
     for ( NSUInteger i = 0; i < count; i++ ) {
         NSURL *url = [metadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
-
-        // Remove any existing contribution to the bytes counts from a previous update
-        ubiquitousBytesToDownload -= [downloadingBytesByURL[url] longLongValue];
-        ubiquitousBytesToUpload -= [uploadingBytesByURL[url] longLongValue];
-
-        [downloadingBytesByURL removeObjectForKey:url];
-        [uploadingBytesByURL removeObjectForKey:url];
         
         NSNumber *percentDownloaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentDownloadedKey forResultAtIndex:i];
         NSNumber *percentUploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentUploadedKey forResultAtIndex:i];;
@@ -128,26 +116,27 @@
 
         unsigned long long fileSize = fileSizeNumber.unsignedLongLongValue;
         if ( downloaded && !downloaded.boolValue ) {
-            double percentage = percentDownloaded ? percentDownloaded.doubleValue : 100.0;
+            double percentage = percentDownloaded ? percentDownloaded.doubleValue : 0.0;
             long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
-            ubiquitousBytesToDownload += fileDownloadSize;
-            downloadingBytesByURL[url] = @(fileDownloadSize);
+            toDownload += fileDownloadSize;
             
             // Start download
             NSError *error = nil;
             if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
         }
         else if ( uploaded && !uploaded.boolValue ) {
-            double percentage = percentUploaded ? percentUploaded.doubleValue : 100.0;
+            double percentage = percentUploaded ? percentUploaded.doubleValue : 0.0;
             long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
-            ubiquitousBytesToUpload += fileDownloadSize;
-            uploadingBytesByURL[url] = @(fileDownloadSize);
+            toUpload += fileDownloadSize;
             
             // Force upload
             NSError *error = nil;
             if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
         }
     }
+    
+    ubiquitousBytesToDownload = toDownload;
+    ubiquitousBytesToUpload = toUpload;
     
     if ( progressCallbackBlock ) progressCallbackBlock(ubiquitousBytesToDownload, ubiquitousBytesToUpload);
     
