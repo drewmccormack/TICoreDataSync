@@ -49,7 +49,7 @@
 
 - (id)init
 {
-    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K like '*'", NSMetadataItemFSNameKey];
+    NSPredicate *newPredicate = [NSPredicate predicateWithFormat:@"%K = FALSE OR %K = FALSE", NSMetadataUbiquitousItemIsDownloadedKey, NSMetadataUbiquitousItemIsUploadedKey];
     return [self initWithPredicate:newPredicate];
 }
 
@@ -82,9 +82,24 @@
     [metadataQuery startQuery];
 }
 
+- (void)scheduleRefresh
+{
+    [self.class cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshIfStale) object:nil];
+    [self performSelector:@selector(refreshIfStale) withObject:nil afterDelay:5.0];
+}
+
+- (void)refreshIfStale
+{
+    id block = [[progressCallbackBlock retain] autorelease];
+    [self stopMonitoring];
+    [self startMonitoringWithProgressBlock:block];
+}
+
 - (void)stopMonitoring
 {
     [metadataQuery disableUpdates];
+    
+    [self.class cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshIfStale) object:nil];
 
     isMonitoring = NO;
         
@@ -141,6 +156,8 @@
     if ( progressCallbackBlock ) progressCallbackBlock(ubiquitousBytesToDownload, ubiquitousBytesToUpload);
     
     [metadataQuery enableUpdates];
+    
+    [self scheduleRefresh];
 }
 
 @end
