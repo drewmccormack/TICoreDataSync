@@ -137,7 +137,7 @@
             
             // Start download
             NSError *error = nil;
-            if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
+            if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate download with error: %@", error);
         }
         else if ( uploaded && !uploaded.boolValue ) {
             double percentage = percentUploaded ? percentUploaded.doubleValue : 0.0;
@@ -146,7 +146,7 @@
             
             // Force upload
             NSError *error = nil;
-            if ( initiateTransfers && percentage == 0.0 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
+            if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) NSLog(@"Failed to initiate upload with error: %@", error);
         }
     }
     
