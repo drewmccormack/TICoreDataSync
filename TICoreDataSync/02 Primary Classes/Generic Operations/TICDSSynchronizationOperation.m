@@ -528,43 +528,46 @@
     syncChanges = [syncChanges sortedArrayUsingDescriptors:[NSArray arrayWithObject:sequenceSort]];
     [sequenceSort release], sequenceSort = nil;
     
-    NSInteger changeCount = 1;
-    // Apply each object's changes in turn
-    for( TICDSSyncChange *eachChange in syncChanges ) {
-        NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-        
-        switch( [[eachChange changeType] unsignedIntegerValue] ) {
-            case TICDSSyncChangeTypeObjectInserted:
-                [self applyObjectInsertedSyncChange:eachChange];
-                [[self backgroundApplicationContext] processPendingChanges];
-                break;
+    @try {
+        NSInteger changeCount = 1;
+        // Apply each object's changes in turn
+        for( TICDSSyncChange *eachChange in syncChanges ) {
+            @autoreleasepool {
+                switch( [[eachChange changeType] unsignedIntegerValue] ) {
+                    case TICDSSyncChangeTypeObjectInserted:
+                        [self applyObjectInsertedSyncChange:eachChange];
+                        [[self backgroundApplicationContext] processPendingChanges];
+                        break;
+                        
+                    case TICDSSyncChangeTypeAttributeChanged:
+                        [self applyAttributeChangeSyncChange:eachChange];
+                        break;
+                        
+                    case TICDSSyncChangeTypeToOneRelationshipChanged:
+                        [self applyToOneRelationshipSyncChange:eachChange];
+                        break;
+                        
+                    case TICDSSyncChangeTypeToManyRelationshipChangedByAddingObject:
+                    case TICDSSyncChangeTypeToManyRelationshipChangedByRemovingObject:
+                        [self applyToManyRelationshipSyncChange:eachChange];
+                        break;
+                        
+                    case TICDSSyncChangeTypeObjectDeleted:
+                        [self applyObjectDeletedSyncChange:eachChange];
+                        break;
+                }
                 
-            case TICDSSyncChangeTypeAttributeChanged:
-                [self applyAttributeChangeSyncChange:eachChange];
-                break;
+                [[eachChange managedObjectContext] refreshObject:eachChange mergeChanges:NO]; // Keep memory low
                 
-            case TICDSSyncChangeTypeToOneRelationshipChanged:
-                [self applyToOneRelationshipSyncChange:eachChange];
-                break;
-                
-            case TICDSSyncChangeTypeToManyRelationshipChangedByAddingObject:
-            case TICDSSyncChangeTypeToManyRelationshipChangedByRemovingObject:
-                [self applyToManyRelationshipSyncChange:eachChange];
-                break;
-                
-            case TICDSSyncChangeTypeObjectDeleted:
-                [self applyObjectDeletedSyncChange:eachChange];
-                break;
+                [self ti_alertDelegateOnMainThreadWithSelector:@selector(synchronizationOperation:processedChangeNumber:outOfTotalChangeCount:fromClientNamed:) waitUntilDone:NO, [NSNumber numberWithInteger:changeCount++], [NSNumber numberWithInteger:[syncChanges count]], self.changeSetProgressString];
+            }
         }
         
-        [[eachChange managedObjectContext] refreshObject:eachChange mergeChanges:NO]; // Keep memory low
-        
-        [self ti_alertDelegateOnMainThreadWithSelector:@selector(synchronizationOperation:processedChangeNumber:outOfTotalChangeCount:fromClientNamed:) waitUntilDone:NO, [NSNumber numberWithInteger:changeCount++], [NSNumber numberWithInteger:[syncChanges count]], self.changeSetProgressString];
-        
-        [pool drain];
+        [[self backgroundApplicationContext] processPendingChanges];
     }
-    
-    [[self backgroundApplicationContext] processPendingChanges];
+    @catch ( NSException *exception ) {
+        return NO;
+    }
     
     return YES;
 }
