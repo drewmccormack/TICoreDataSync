@@ -17,7 +17,26 @@ static NSString *bigDataDirectory = nil;
     if ( bigDataDirectory == nil ) {
         bigDataDirectory = [[NSTemporaryDirectory() stringByAppendingPathComponent:@"TICDSSyncChangeData"] retain];
         if ( [[NSFileManager defaultManager] fileExistsAtPath:bigDataDirectory] ) {
-            [[NSFileManager defaultManager] removeItemAtPath:bigDataDirectory error:NULL];
+            
+            // Try to move aside the old directory, and delete it in the background
+            NSString *oldBigDataDirectory = [bigDataDirectory stringByAppendingPathExtension:@"old"];
+            [[NSFileManager defaultManager] removeItemAtPath:oldBigDataDirectory error:NULL]; // Remove in odd case that this folder already exists
+            
+            // Remove in background, because it can be expensive and lock up the main thread
+            if ( [[NSFileManager defaultManager] moveItemAtPath:bigDataDirectory toPath:oldBigDataDirectory error:NULL] ) {
+                dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+                    NSFileManager *fm = [NSFileManager new];
+                    NSError *error;
+                    BOOL success = [fm removeItemAtPath:oldBigDataDirectory error:&error];
+                    if ( !success ) NSLog(@"Failed to remove big data directory: %@", error);
+                    [fm release];
+                });
+            }
+            else {
+                // Move failed, so just remove directly on main thread
+                [[NSFileManager defaultManager] removeItemAtPath:bigDataDirectory error:NULL];
+            }
+
         }
         [[NSFileManager defaultManager] createDirectoryAtPath:bigDataDirectory withIntermediateDirectories:NO attributes:nil error:NULL];
     }
