@@ -98,6 +98,7 @@
 - (void)stopMonitoring
 {
     [metadataQuery disableUpdates];
+    [metadataQuery stopQuery];
     
     [self.class cancelPreviousPerformRequestsWithTarget:self selector:@selector(refreshIfStale) object:nil];
 
@@ -106,7 +107,6 @@
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidFinishGatheringNotification object:metadataQuery];
     [[NSNotificationCenter defaultCenter] removeObserver:self name:NSMetadataQueryDidUpdateNotification object:metadataQuery];
     
-    [metadataQuery stopQuery];
     [metadataQuery release], metadataQuery = nil;
     
     // Release callback last, because it could be retaining objects
@@ -117,75 +117,70 @@
 {
     [metadataQuery disableUpdates];
     
-    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
-        NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
-        __block BOOL downloadErrorArose = NO, uploadErrorArose = NO;
-        NSError *downloadError = nil, *uploadError = nil;
-        
-        NSUInteger count = [metadataQuery resultCount];
-        __block long long toDownload = 0, toUpload = 0;
-        for ( NSUInteger i = 0; i < count; i++ ) {
-            @autoreleasepool {
-                NSURL *url = [metadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+    NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
+    BOOL downloadErrorArose = NO, uploadErrorArose = NO;
+    NSError *downloadError = nil, *uploadError = nil;
+    
+    NSUInteger count = [metadataQuery resultCount];
+    long long toDownload = 0, toUpload = 0;
+    for ( NSUInteger i = 0; i < count; i++ ) {
+        @autoreleasepool {
+            NSURL *url = [metadataQuery valueOfAttribute:NSMetadataItemURLKey forResultAtIndex:i];
+            NSNumber *percentDownloaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentDownloadedKey forResultAtIndex:i];
+            NSNumber *percentUploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentUploadedKey forResultAtIndex:i];
+            NSNumber *downloaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemIsDownloadedKey forResultAtIndex:i];
+            NSNumber *uploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemIsUploadedKey forResultAtIndex:i];
+            NSNumber *fileSizeNumber = [metadataQuery valueOfAttribute:NSMetadataItemFSSizeKey forResultAtIndex:i];
+            
+            unsigned long long fileSize = fileSizeNumber ? fileSizeNumber.unsignedLongLongValue : 0;
+            if ( downloaded && !downloaded.boolValue ) {
+                double percentage = percentDownloaded ? percentDownloaded.doubleValue : 0.0;
+                long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
+                toDownload += fileDownloadSize;
                 
-                NSNumber *percentDownloaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentDownloadedKey forResultAtIndex:i];
-                NSNumber *percentUploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemPercentUploadedKey forResultAtIndex:i];
-                NSNumber *downloaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemIsDownloadedKey forResultAtIndex:i];
-                NSNumber *uploaded = [metadataQuery valueOfAttribute:NSMetadataUbiquitousItemIsUploadedKey forResultAtIndex:i];
-                NSNumber *fileSizeNumber = [metadataQuery valueOfAttribute:NSMetadataItemFSSizeKey forResultAtIndex:i];
-                
-                unsigned long long fileSize = fileSizeNumber ? fileSizeNumber.unsignedLongLongValue : 0;
-                if ( downloaded && !downloaded.boolValue ) {
-                    double percentage = percentDownloaded ? percentDownloaded.doubleValue : 0.0;
-                    long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
-                    toDownload += fileDownloadSize;
-                    
-                    // Start download
-                    NSError *error;
-                    if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
-                        if ( downloadErrorArose ) [downloadError release]; // Release old error
-                        downloadErrorArose = YES;
-                        downloadError = [error retain];
-                    }
+                // Start download
+                NSError *error;
+                if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
+                    if ( downloadErrorArose ) [downloadError release]; // Release old error
+                    downloadErrorArose = YES;
+                    downloadError = [error retain];
                 }
-                else if ( uploaded && !uploaded.boolValue ) {
-                    double percentage = percentUploaded ? percentUploaded.doubleValue : 0.0;
-                    long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
-                    toUpload += fileDownloadSize;
-                    
-                    // Force upload
-                    NSError *error;
-                    if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
-                        if ( uploadErrorArose ) [uploadError release];
-                        uploadErrorArose = YES;
-                        uploadError = [error retain];
-                    }
+            }
+            else if ( uploaded && !uploaded.boolValue ) {
+                double percentage = percentUploaded ? percentUploaded.doubleValue : 0.0;
+                long long fileDownloadSize = (1.0 - percentage / 100.0) * fileSize;
+                toUpload += fileDownloadSize;
+                
+                // Force upload
+                NSError *error;
+                if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
+                    if ( uploadErrorArose ) [uploadError release];
+                    uploadErrorArose = YES;
+                    uploadError = [error retain];
                 }
             }
         }
-        
-        // Log last error
-        if ( downloadErrorArose ) {
-            NSLog(@"Failed to initiate download(s) with last error: %@", downloadError);
-        }
-        if ( uploadErrorArose ) {
-            NSLog(@"Failed to initiate download(s) with last error: %@", uploadError);
-        }
-        [downloadError release];
-        [uploadError release];
-        
-        // Update on main queue, and callback
-        dispatch_async(dispatch_get_main_queue(), ^{
-            ubiquitousBytesToDownload = toDownload;
-            ubiquitousBytesToUpload = toUpload;
-            
-            if ( progressCallbackBlock ) progressCallbackBlock(ubiquitousBytesToDownload, ubiquitousBytesToUpload);
-            
-            [metadataQuery enableUpdates];
-            
-            [self scheduleRefresh];
-        });
-    });
+    }
+    
+    // Log last error
+    if ( downloadErrorArose ) {
+        NSLog(@"Failed to initiate download(s) with last error: %@", downloadError);
+    }
+    if ( uploadErrorArose ) {
+        NSLog(@"Failed to initiate download(s) with last error: %@", uploadError);
+    }
+    [downloadError release];
+    [uploadError release];
+    
+    // Update and callback
+    ubiquitousBytesToDownload = toDownload;
+    ubiquitousBytesToUpload = toUpload;
+    
+    if ( progressCallbackBlock ) progressCallbackBlock(ubiquitousBytesToDownload, ubiquitousBytesToUpload);
+    
+    [metadataQuery enableUpdates];
+    
+    [self scheduleRefresh];
 }
 
 @end
