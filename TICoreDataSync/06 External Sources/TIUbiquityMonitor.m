@@ -118,8 +118,6 @@
     [metadataQuery disableUpdates];
     
     NSFileManager *fileManager = [[[NSFileManager alloc] init] autorelease];
-    BOOL downloadErrorArose = NO, uploadErrorArose = NO;
-    NSError *downloadError = nil, *uploadError = nil;
     
     NSUInteger count = [metadataQuery resultCount];
     long long toDownload = 0, toUpload = 0;
@@ -139,11 +137,12 @@
                 toDownload += fileDownloadSize;
                 
                 // Start download
-                NSError *error;
-                if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
-                    if ( downloadErrorArose ) [downloadError release]; // Release old error
-                    downloadErrorArose = YES;
-                    downloadError = [error retain];
+                if ( initiateTransfers && percentage < 1.e-6 ) {
+                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+                        NSError *error;
+                        BOOL startedDownload = [fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
+                        if ( !startedDownload ) NSLog(@"Error starting download: %@", error);
+                    });
                 }
             }
             else if ( uploaded && !uploaded.boolValue ) {
@@ -152,25 +151,16 @@
                 toUpload += fileDownloadSize;
                 
                 // Force upload
-                NSError *error;
-                if ( initiateTransfers && percentage < 1.e-6 && ![fileManager startDownloadingUbiquitousItemAtURL:url error:&error] ) {
-                    if ( uploadErrorArose ) [uploadError release];
-                    uploadErrorArose = YES;
-                    uploadError = [error retain];
+                if ( initiateTransfers && percentage < 1.e-6 ) {
+                    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_LOW, 0), ^{
+                        NSError *error;
+                        BOOL uploadStarted = [fileManager startDownloadingUbiquitousItemAtURL:url error:&error];
+                        if ( !uploadStarted ) NSLog(@"Error starting upload: %@", error);
+                    });
                 }
             }
         }
     }
-    
-    // Log last error
-    if ( downloadErrorArose ) {
-        NSLog(@"Failed to initiate download(s) with last error: %@", downloadError);
-    }
-    if ( uploadErrorArose ) {
-        NSLog(@"Failed to initiate download(s) with last error: %@", uploadError);
-    }
-    [downloadError release];
-    [uploadError release];
     
     // Update and callback
     ubiquitousBytesToDownload = toDownload;
