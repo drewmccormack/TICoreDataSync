@@ -292,21 +292,19 @@
 - (NSString *)thisDocumentTemporaryWholeStoreThisClientDirectoryPath
 {
     NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
-    [path stringByAppendingPathComponent:[self clientIdentifier]];
+    path = [path stringByAppendingPathComponent:[self clientIdentifier]];
     return path;
 }
 
 - (NSString *)thisDocumentTemporaryWholeStoreFilePath
 {
-    NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
+    NSString *path = [[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] stringByAppendingPathComponent:TICDSWholeStoreFilename];
     return path;
 }
 
 - (NSString *)thisDocumentTemporaryAppliedSyncChangeSetsFilePath
 {
-    NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
-    [path stringByAppendingPathComponent:[self clientIdentifier]];
-    [path stringByAppendingPathComponent:TICDSAppliedSyncChangeSetsFilename];
+    NSString *path = [[self thisDocumentTemporaryWholeStoreThisClientDirectoryPath] stringByAppendingPathComponent:TICDSAppliedSyncChangeSetsFilename];
     return path;
 }
 

@@ -27,7 +27,7 @@
     NSDate *eachModificationDate = nil;
     NSDictionary *attributes = nil;
     for( NSString *eachIdentifier in clientIdentifiers ) {
-        if( [[eachIdentifier substringToIndex:1] isEqualToString:@"."] ) {
+        if( [[eachIdentifier substringToIndex:1] isEqualToString:@"."] || [eachIdentifier isEqualToString:@"SharedExternalData"] ) {
             continue;
         }
         
@@ -145,6 +145,9 @@
     NSString *fileType = [attributes objectForKey:NSFileType];
     if ( [fileType isEqualToString:NSFileTypeDirectory] ) {
         success = [self syncDirectoryURL:storeURL error:&anyError];
+        
+        NSURL *sharedFilesURL = [NSURL fileURLWithPath:[wholeStorePath stringByAppendingPathComponent:@"../../SharedExternalData"]];
+        [self syncDirectoryURL:sharedFilesURL error:NULL];
     }
     else {
         success = [self syncFileURL:storeURL timeout:300.0 error:&anyError];
@@ -157,13 +160,34 @@
     
     if( ![self shouldUseEncryption] ) {
         // just copy the file straight across
-        success = [self copyItemAtPath:wholeStorePath toPath:[[self localWholeStoreFileLocation] path] error:&anyError];
-        
+        NSString *localPath = [[self localWholeStoreFileLocation] path];
+        success = [self copyItemAtPath:wholeStorePath toPath:localPath error:&anyError];
         if( !success ) {
             [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
+            [self downloadedWholeStoreFileWithSuccess:NO];
+            return;
         }
         
-        [self downloadedWholeStoreFileWithSuccess:success];
+        // check for a manifest, and copy in shared files, if necessary
+        static NSString * const manifestSubPath = @".Data_SUPPORT/_EXTERNAL_DATA/manifest.plist";
+        NSString *manifest = [localPath stringByAppendingPathComponent:manifestSubPath];
+        if ( [self.fileManager fileExistsAtPath:manifest] ) {
+            NSArray *filenames = [NSArray arrayWithContentsOfFile:manifest];
+            for ( NSString *file in filenames ) {
+                NSString *remoteSubPath = [@"../../SharedExternalData" stringByAppendingPathComponent:file];
+                NSString *remoteFile = [wholeStorePath stringByAppendingPathComponent:remoteSubPath];
+                NSString *localSubPath = [@".Data_SUPPORT/_EXTERNAL_DATA" stringByAppendingPathComponent:file];
+                NSString *localFile = [localPath stringByAppendingPathComponent:localSubPath];
+                if ( ![self copyItemAtPath:remoteFile toPath:localFile error:&anyError] ) {
+                    [self setError:[TICDSError errorWithCode:TICDSErrorCodeFileManagerError underlyingError:anyError classAndMethod:__PRETTY_FUNCTION__]];
+                    [self downloadedWholeStoreFileWithSuccess:NO];
+                    return;
+                }
+            }
+            [self.fileManager removeItemAtPath:manifest error:NULL];
+        }
+            
+        [self downloadedWholeStoreFileWithSuccess:YES];
         return;
     }
     

@@ -54,8 +54,7 @@
     BOOL hasExternalBinaries = [self.fileManager fileExistsAtPath:localStoreExtDir];
     if ( !hasExternalBinaries ) return [self copyItemAtPath:localPath toPath:tempPath error:error];
     
-    NSString *remoteStore = [self thisDocumentWholeStoreThisClientDirectoryPath];
-    NSString *remoteSharedExtDir = [remoteStore stringByAppendingPathComponent:@"../SharedExternalData"];
+    NSString *remoteSharedExtDir = [[self thisDocumentWholeStoreThisClientDirectoryPath] stringByAppendingPathComponent:@"../SharedExternalData"];
     
     NSArray *externalFiles = [self.fileManager contentsOfDirectoryAtPath:localStoreExtDir error:error];
     if ( !externalFiles ) return NO;
@@ -74,7 +73,7 @@
     if ( ![self copyItemAtPath:localPath toPath:tempPath error:error] ) return NO;
     
     // Create the temporary shared directory
-    NSString *tempSharedExtDir = [tempPath stringByAppendingPathComponent:@"../SharedExternalData"];
+    NSString *tempSharedExtDir = [tempPath stringByAppendingPathComponent:@"../../SharedExternalData"];
     [self.fileManager removeItemAtPath:tempSharedExtDir error:NULL];
     if ( ![self.fileManager createDirectoryAtPath:tempSharedExtDir withIntermediateDirectories:YES attributes:nil error:error] ) return NO;
     
