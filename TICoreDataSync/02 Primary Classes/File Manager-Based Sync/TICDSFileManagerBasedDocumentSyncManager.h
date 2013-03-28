@@ -23,6 +23,8 @@
     
     TIKQDirectoryWatcher *_directoryWatcher;
     NSMutableArray *_watchedClientDirectoryIdentifiers;
+    
+    NSString *_tempDirectoryPath;
 }
 
 /** @name Automatic Change Detection */

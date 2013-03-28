@@ -15,6 +15,17 @@
 
 @implementation TICDSFileManagerBasedDocumentSyncManager
 
+-(id)init
+{
+    self = [super init];
+    if ( self ) {
+        _tempDirectoryPath = [[NSTemporaryDirectory() stringByAppendingPathComponent:[[NSProcessInfo processInfo] globallyUniqueString]] retain];
+        [[NSFileManager defaultManager] removeItemAtPath:_tempDirectoryPath error:NULL];
+        [[NSFileManager defaultManager] createDirectoryAtPath:_tempDirectoryPath withIntermediateDirectories:YES attributes:nil error:NULL];
+    }
+    return self;
+}
+
 #pragma mark -
 #pragma mark Overridden Notification Methods
 - (void)applicationSyncManagerWillRemoveAllRemoteSyncData:(NSNotification *)aNotification
@@ -22,6 +33,9 @@
     [super applicationSyncManagerWillRemoveAllRemoteSyncData:aNotification];
     
     [_directoryWatcher release], _directoryWatcher = nil;
+    
+    [[NSFileManager defaultManager] removeItemAtPath:_tempDirectoryPath error:NULL];
+    [[NSFileManager defaultManager] createDirectoryAtPath:_tempDirectoryPath withIntermediateDirectories:YES attributes:nil error:NULL];
 }
 
 #pragma mark -
@@ -277,17 +291,23 @@
 
 - (NSString *)thisDocumentTemporaryWholeStoreThisClientDirectoryPath
 {
-    return [[self applicationDirectoryPath] stringByAppendingPathComponent:[self relativePathToThisDocumentTemporaryWholeStoreThisClientDirectory]];
+    NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
+    [path stringByAppendingPathComponent:[self clientIdentifier]];
+    return path;
 }
 
 - (NSString *)thisDocumentTemporaryWholeStoreFilePath
 {
-    return [[self applicationDirectoryPath] stringByAppendingPathComponent:[self relativePathToThisDocumentTemporaryWholeStoreThisClientDirectoryWholeStoreFile]];
+    NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
+    return path;
 }
 
 - (NSString *)thisDocumentTemporaryAppliedSyncChangeSetsFilePath
 {
-    return [[self applicationDirectoryPath] stringByAppendingPathComponent:[self relativePathToThisDocumentTemporaryWholeStoreThisClientDirectoryAppliedSyncChangeSetsFile]];
+    NSString *path = [_tempDirectoryPath stringByAppendingPathComponent:TICDSWholeStoreDirectoryName];
+    [path stringByAppendingPathComponent:[self clientIdentifier]];
+    [path stringByAppendingPathComponent:TICDSAppliedSyncChangeSetsFilename];
+    return path;
 }
 
 - (NSString *)thisDocumentWholeStoreDirectoryPath
@@ -327,6 +347,9 @@
     [_applicationDirectoryPath release], _applicationDirectoryPath = nil;
     [_directoryWatcher release], _directoryWatcher = nil;
     [_watchedClientDirectoryIdentifiers release], _watchedClientDirectoryIdentifiers = nil;
+    
+    [[NSFileManager defaultManager] removeItemAtPath:_tempDirectoryPath error:NULL];
+    [_tempDirectoryPath release]; _tempDirectoryPath = nil;
 
     [super dealloc];
 }
