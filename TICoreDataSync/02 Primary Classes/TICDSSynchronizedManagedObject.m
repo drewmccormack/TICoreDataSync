@@ -68,8 +68,8 @@
             continue;
         }
                 
-        NSRelationshipDescription *relationship = [[[self entity] relationshipsByName] valueForKey:eachPropertyName];
-        NSAttributeDescription *attribute = [[[self entity] attributesByName] valueForKey:eachPropertyName];
+        NSRelationshipDescription *relationship = [[[self entity] relationshipsByName] objectForKey:eachPropertyName];
+        NSAttributeDescription *attribute = [[[self entity] attributesByName] objectForKey:eachPropertyName];
         if ( relationship && !relationship.isTransient ) {
             [self createSyncChangeIfApplicableForRelationship:relationship];
         }
