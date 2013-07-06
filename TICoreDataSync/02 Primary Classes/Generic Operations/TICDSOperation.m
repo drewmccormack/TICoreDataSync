@@ -369,7 +369,8 @@
 - (NSArray *)contentsOfDirectoryAtPath:(NSString *)path error:(NSError **)error
 {
     NSURL *url = [NSURL fileURLWithPath:path];
-    __block NSError *anyError;
+    NSError *fileCoordError = nil;
+    __block NSError *fileManagerError = nil;
     __block NSArray *result = nil;
 
     __block BOOL beganFileOperation = NO;
@@ -382,20 +383,25 @@
         }
     }];
     
-    [fileCoordinator coordinateReadingItemAtURL:url options:0 error:&anyError byAccessor:^(NSURL *newURL) {
+    [fileCoordinator coordinateReadingItemAtURL:url options:0 error:&fileCoordError byAccessor:^(NSURL *newURL) {
         dispatch_sync([self.class fileCoordinationDispatchQueue], ^{ beganFileOperation = YES; });
         if ( cancelled ) return;
-        result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&anyError];
+        result = [[self fileManager] contentsOfDirectoryAtPath:newURL.path error:&fileManagerError];
+        [fileManagerError retain];
+        [result retain];
     }];
+    [fileManagerError autorelease];
+    [result autorelease];
     
-    if ( error ) *error = anyError;
+    if ( error && fileCoordError ) *error = fileCoordError;
+    if ( error && fileManagerError ) *error = fileManagerError;
     return result;
 }
 
 - (NSDictionary *)attributesOfItemAtPath:(NSString *)path error:(NSError **)error
 {
     NSURL *url = [NSURL fileURLWithPath:path];
-    __block NSError *anyError;
+    __block NSError *anyError = nil;
     __block NSDictionary *result = nil;
 
     __block BOOL beganFileOperation = NO;
