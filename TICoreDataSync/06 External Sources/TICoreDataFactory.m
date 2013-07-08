@@ -156,8 +156,8 @@
 - (NSDictionary *)persistentStoreOptions
 {
     if( _persistentStoreOptions ) return _persistentStoreOptions;
-    
-    _persistentStoreOptions = [[NSDictionary dictionaryWithObject:[NSNumber numberWithBool:YES] forKey:NSMigratePersistentStoresAutomaticallyOption] retain];
+    NSDictionary *journalingOptions = [NSDictionary dictionaryWithObject:@"DELETE" forKey:@"journal_mode"];
+    _persistentStoreOptions = [[NSDictionary dictionaryWithObjectsAndKeys:@(YES), NSMigratePersistentStoresAutomaticallyOption, journalingOptions, NSSQLitePragmasOption, nil] retain];
     return _persistentStoreOptions;
 }
 
