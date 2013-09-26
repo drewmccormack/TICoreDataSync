@@ -689,8 +689,8 @@
             
             // if we get here, we have a conflict between eachRemoteChange and eachLocalChange
             TICDSSyncConflict *conflict = [TICDSSyncConflict syncConflictOfType:TICDSSyncConflictRemoteAttributeChangedAndLocalAttributeChanged forEntityName:[eachLocalChange objectEntityName] key:[eachLocalChange relevantKey] objectSyncID:[eachLocalChange objectSyncID]];
-            [conflict setLocalInformation:[NSDictionary dictionaryWithObject:[eachLocalChange changedAttributes] forKey:kTICDSChangedAttributeValue]];
-            [conflict setRemoteInformation:[NSDictionary dictionaryWithObject:[eachRemoteChange changedAttributes] forKey:kTICDSChangedAttributeValue]];
+            [conflict setLocalInformation:[NSDictionary dictionaryWithObject:([eachLocalChange changedAttributes] ? : [NSNull null]) forKey:kTICDSChangedAttributeValue]];
+            [conflict setRemoteInformation:[NSDictionary dictionaryWithObject:([eachRemoteChange changedAttributes] ? : [NSNull null]) forKey:kTICDSChangedAttributeValue]];
             TICDSSyncConflictResolutionType resolutionType = [self resolutionTypeForConflict:conflict];
             
             if( [self isCancelled] ) {
