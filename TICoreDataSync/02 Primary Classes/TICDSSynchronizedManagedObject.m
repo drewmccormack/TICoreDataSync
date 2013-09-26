@@ -62,14 +62,16 @@
     NSDictionary *changedValues = [self changedValues];
     
     NSSet *propertyNamesToBeIgnored = [[self class] keysForWhichSyncChangesWillNotBeCreated];
+    NSDictionary *relationshipsByName = [[NSDictionary alloc] initWithDictionary:[[self entity] relationshipsByName]];
+    NSDictionary *attributesByName = [[NSDictionary alloc] initWithDictionary:[[self entity] attributesByName]];
     for( NSString *eachPropertyName in changedValues ) {
         if (propertyNamesToBeIgnored != nil && [propertyNamesToBeIgnored containsObject:eachPropertyName]) {
             TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Not creating a change for %@.%@", [self class], eachPropertyName);
             continue;
         }
-                
-        NSRelationshipDescription *relationship = [[[self entity] relationshipsByName] objectForKey:eachPropertyName];
-        NSAttributeDescription *attribute = [[[self entity] attributesByName] objectForKey:eachPropertyName];
+        
+        NSRelationshipDescription *relationship = [relationshipsByName objectForKey:eachPropertyName];
+        NSAttributeDescription *attribute = [attributesByName objectForKey:eachPropertyName];
         if ( relationship && !relationship.isTransient ) {
             [self createSyncChangeIfApplicableForRelationship:relationship];
         }
@@ -81,6 +83,8 @@
             [syncChange setChangedAttributes:eachValue];
         }
     }
+    [relationshipsByName release];
+    [attributesByName release];
 }
 
 #pragma mark -
