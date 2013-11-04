@@ -41,7 +41,7 @@
 
 - (BOOL)beginApplyingSyncChangesInChangeSet:(TICDSSyncChangeSet *)aChangeSet;
 - (NSArray *)syncChangesAfterCheckingForConflicts:(NSArray *)syncChanges;
-- (NSArray *)remoteSyncChangesForObjectWithIdentifier:(NSString *)anIdentifier afterCheckingForConflictsInRemoteSyncChanges:(NSArray *)remoteSyncChanges;
+- (NSArray *)remoteSyncChangesForObjectWithIdentifier:(NSString *)identifier afterCheckingForConflictsInRemoteSyncChanges:(NSArray *)remoteSyncChanges withLocalSyncChanges:(NSArray *)localSyncChanges;
 - (void)addWarningsForRemoteDeletionWithLocalChanges:(NSArray *)localChanges;
 - (void)addWarningsForRemoteChangesWithLocalDeletion:(NSArray *)remoteChanges;
 - (TICDSSyncConflictResolutionType)resolutionTypeForConflict:(TICDSSyncConflict *)aConflict;
@@ -612,10 +612,25 @@
         [syncChangesByObjectSyncID setObject:changesForID forKey:key];
     }
     
+    // Fetch changes for each identifier
+    NSError *anyError;
+    NSArray *allLocalSyncChanges = [TICDSSyncChange ti_objectsMatchingPredicate:[NSPredicate predicateWithFormat:@"objectSyncID IN %@", identifiersOfAffectedObjects] inManagedObjectContext:[self localSyncChangesToMergeContext] sortedByKey:@"changeType" ascending:YES error:&anyError];
+    NSMutableDictionary *localSyncChangesByObjectSyncID = [NSMutableDictionary dictionaryWithCapacity:allLocalSyncChanges.count];
+    for (TICDSSyncChange *change in allLocalSyncChanges) {
+        NSString *identifier = change.objectSyncID;
+        NSMutableArray *changesForId = [localSyncChangesByObjectSyncID objectForKey:identifier];
+        if (!changesForId) {
+            changesForId = [NSMutableArray arrayWithCapacity:5];
+            [localSyncChangesByObjectSyncID setObject:changesForId forKey:identifier];
+        }
+        [changesForId addObject:change];
+    }
+
     for( NSString *eachIdentifier in identifiersOfAffectedObjects ) {
         NSArray *syncChangesForEachObject = [syncChangesByObjectSyncID objectForKey:eachIdentifier];
+        NSArray *localSyncChanges = [localSyncChangesByObjectSyncID objectForKey:eachIdentifier];
         
-        syncChangesForEachObject = [self remoteSyncChangesForObjectWithIdentifier:eachIdentifier afterCheckingForConflictsInRemoteSyncChanges:syncChangesForEachObject];
+        syncChangesForEachObject = [self remoteSyncChangesForObjectWithIdentifier:eachIdentifier afterCheckingForConflictsInRemoteSyncChanges:syncChangesForEachObject withLocalSyncChanges:localSyncChanges];
         [syncChangesToReturn addObjectsFromArray:syncChangesForEachObject];
     }
     [pool drain];
@@ -623,20 +638,12 @@
     return syncChangesToReturn;
 }
 
-- (NSArray *)remoteSyncChangesForObjectWithIdentifier:(NSString *)anIdentifier afterCheckingForConflictsInRemoteSyncChanges:(NSArray *)remoteSyncChanges
+- (NSArray *)remoteSyncChangesForObjectWithIdentifier:(NSString *)identifier afterCheckingForConflictsInRemoteSyncChanges:(NSArray *)remoteSyncChanges withLocalSyncChanges:(NSArray *)localSyncChanges
 {
     NSError *anyError = nil;
-    NSArray *localSyncChanges = [TICDSSyncChange ti_objectsMatchingPredicate:[NSPredicate predicateWithFormat:@"objectSyncID == %@", anIdentifier] inManagedObjectContext:[self localSyncChangesToMergeContext] sortedByKey:@"changeType" ascending:YES error:&anyError];
     
-// Used to trigger faults on all objects if debugging     
-/*    NSArray *allSyncChanges = [TICDSSyncChange ti_allObjectsInManagedObjectContext:[self localSyncChangesToMergeContext] error:&anyError];
-    for( TICDSSyncChange *eachChange in allSyncChanges ) {
-        NSString *something = [eachChange objectEntityName];
-        something = [eachChange relatedObjectEntityName];
-    }
-*/    
     if( !localSyncChanges ) {
-        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Failed to fetch local sync changes while checking for conflicts: %@", anyError);
+//        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Failed to fetch local sync changes while checking for conflicts: %@", anyError);
         return remoteSyncChanges;
     }
     
