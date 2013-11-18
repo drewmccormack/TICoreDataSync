@@ -879,22 +879,15 @@
         return;
     }
     
-    // capitalize the first char of relationship name to change e.g., someObjects into SomeObjects
-    NSString *relationshipName = [[aSyncChange relevantKey] substringToIndex:1];
-    relationshipName = [relationshipName capitalizedString];
-    relationshipName = [relationshipName stringByAppendingString:[[aSyncChange relevantKey] substringFromIndex:1]];
-    
-    NSString *selectorName = nil;
-    
-    if( [[aSyncChange changeType] unsignedIntegerValue] == TICDSSyncChangeTypeToManyRelationshipChangedByAddingObject ) {
-        selectorName = [NSString stringWithFormat:@"add%@Object:", relationshipName];
-    } else {
-        selectorName = [NSString stringWithFormat:@"remove%@Object:", relationshipName];
-    }
-    
     NSManagedObject *relatedObject = [self backgroundApplicationContextObjectForEntityName:[aSyncChange relatedObjectEntityName] syncIdentifier:[aSyncChange changedRelationships]];
+    if (!relatedObject) return;
     
-    [object performSelector:NSSelectorFromString(selectorName) withObject:relatedObject];
+    NSMutableSet *set = [object mutableSetValueForKey:aSyncChange.relevantKey];
+    if( [[aSyncChange changeType] unsignedIntegerValue] == TICDSSyncChangeTypeToManyRelationshipChangedByAddingObject ) {
+        [set addObject:relatedObject];
+    } else {
+        [set removeObject:relatedObject];
+    }
     
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"[%@] %@", aSyncChange, [aSyncChange objectEntityName]);
     TICDSLog(TICDSLogVerbosityManagedObjectOutput, @"Changed to-many relationships on object: %@", object);
