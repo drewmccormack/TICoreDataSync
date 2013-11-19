@@ -750,6 +750,11 @@
  @param numberOfSets The number of changes sets in the save operation. */
 - (void)synchronizationOperation:(TICDSSynchronizationOperation *)anOperation willSaveSyncChangesWithCount:(NSNumber *)numberOfChanges;
 
+
+@optional
+
+- (void)backgroundManagedObjectContextDidSave:(NSNotification *)notif;
+
 @end
 
 #pragma mark Document Deletion Delegate

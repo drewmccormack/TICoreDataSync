@@ -639,9 +639,7 @@
 }
 
 - (NSArray *)remoteSyncChangesForObjectWithIdentifier:(NSString *)identifier afterCheckingForConflictsInRemoteSyncChanges:(NSArray *)remoteSyncChanges withLocalSyncChanges:(NSArray *)localSyncChanges
-{
-    NSError *anyError = nil;
-    
+{    
     if( !localSyncChanges ) {
 //        TICDSLog(TICDSLogVerbosityErrorsOnly, @"Failed to fetch local sync changes while checking for conflicts: %@", anyError);
         return remoteSyncChanges;
